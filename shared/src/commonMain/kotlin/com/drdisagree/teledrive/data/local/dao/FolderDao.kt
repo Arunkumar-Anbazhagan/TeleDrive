@@ -36,10 +36,12 @@ interface FolderDao {
         """SELECT folders.*,
                   (SELECT COUNT(*) FROM files
                     WHERE files.folderId = folders.id AND files.trashedAt IS NULL
+                      AND files.chatId IS :chatId
                       AND (:showHidden = 1 OR files.isHidden = 0)
                       AND (:showArchived = 1 OR files.isArchived = 0)) AS fileCount,
                   (SELECT COUNT(*) FROM folders AS child
                     WHERE child.parentId = folders.id AND child.trashedAt IS NULL
+                      AND child.chatId IS :chatId
                       AND (:showHidden = 1 OR child.isHidden = 0)
                       AND (:showArchived = 1 OR child.isArchived = 0)) AS folderCount
              FROM folders
@@ -59,10 +61,12 @@ interface FolderDao {
         """SELECT folders.*,
                   (SELECT COUNT(*) FROM files
                     WHERE files.folderId = folders.id AND files.trashedAt IS NULL
+                      AND files.chatId IS :chatId
                       AND (:showHidden = 1 OR files.isHidden = 0)
                       AND (:showArchived = 1 OR files.isArchived = 0)) AS fileCount,
                   (SELECT COUNT(*) FROM folders AS child
                     WHERE child.parentId = folders.id AND child.trashedAt IS NULL
+                      AND child.chatId IS :chatId
                       AND (:showHidden = 1 OR child.isHidden = 0)
                       AND (:showArchived = 1 OR child.isArchived = 0)) AS folderCount
              FROM folders
@@ -232,16 +236,18 @@ interface FolderDao {
 
     @Query(
         """SELECT * FROM folders
-           WHERE trashedAt IS NOT NULL AND preTrashParentId IN (:parentIds)"""
+           WHERE trashedAt IS NOT NULL AND preTrashParentId IN (:parentIds)
+             AND chatId IS :chatId"""
     )
-    suspend fun trashedChildrenOf(parentIds: List<String>): List<FolderEntity>
+    suspend fun trashedChildrenOf(parentIds: List<String>, chatId: Long?): List<FolderEntity>
 
     @Query(
         """SELECT preTrashParentId AS parentId, COUNT(*) AS childCount FROM folders
            WHERE trashedAt IS NOT NULL AND preTrashParentId IN (:parentIds)
+             AND chatId IS :chatId
            GROUP BY preTrashParentId"""
     )
-    suspend fun trashedFolderCounts(parentIds: List<String>): List<TrashChildCount>
+    suspend fun trashedFolderCounts(parentIds: List<String>, chatId: Long?): List<TrashChildCount>
 
     @Query(
         """SELECT child.* FROM folders AS child
@@ -253,6 +259,12 @@ interface FolderDao {
 
     @Query("SELECT * FROM folders WHERE trashedAt IS NOT NULL AND trashedAt < :threshold")
     suspend fun trashOlderThan(threshold: Long): List<FolderEntity>
+
+    @Query("SELECT * FROM folders WHERE trashedAt IS NOT NULL AND chatId IS :chatId")
+    suspend fun trashInChat(chatId: Long?): List<FolderEntity>
+
+    @Query("SELECT COUNT(*) FROM folders WHERE parentId = :id OR preTrashParentId = :id")
+    suspend fun childCount(id: String): Int
 
     @Query("DELETE FROM folders WHERE id = :id")
     suspend fun delete(id: String)

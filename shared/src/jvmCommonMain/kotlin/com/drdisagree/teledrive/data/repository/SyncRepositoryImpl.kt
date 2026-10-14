@@ -379,20 +379,25 @@ class SyncRepositoryImpl(
      */
     private suspend fun resolveFolder(
         manifest: RemoteFileManifest,
-        cache: MutableMap<String, String?>
+        cache: MutableMap<String, String?>,
+        chatId: Long
     ): String? {
         manifest.folderId?.let { id ->
             if (cache.containsValue(id)) return id
-            if (folderPathResolver.exists(id)) {
+            if (folderPathResolver.exists(id, chatId)) {
                 cache[manifest.folderPath] = id
                 return id
             }
         }
         if (cache.containsKey(manifest.folderPath)) return cache[manifest.folderPath]
         val resolved = if (manifest.trashedAt != null) {
-            folderPathResolver.resolveExisting(manifest.folderPath)
+            folderPathResolver.resolveExisting(manifest.folderPath, chatId)
         } else {
-            folderPathResolver.resolveOrCreate(manifest.folderPath, manifest.folderId)
+            folderPathResolver.resolveOrCreate(
+                manifest.folderPath,
+                manifest.folderId,
+                chatId = chatId
+            )
         }
         cache[manifest.folderPath] = resolved
         return resolved
@@ -427,8 +432,10 @@ class SyncRepositoryImpl(
 
         val remoteFolderId = when {
             manifest == null -> existing?.folderId
-            laterPart -> manifest.folderId?.takeIf { folderPathResolver.exists(it) }
-            else -> resolveFolder(manifest, folderCache)
+            laterPart -> manifest.folderId?.takeIf {
+                folderPathResolver.exists(it, document.chatId)
+            }
+            else -> resolveFolder(manifest, folderCache, document.chatId)
         }
         val folderId = if (local != null) {
             local.folderId ?: local.preTrashFolderId

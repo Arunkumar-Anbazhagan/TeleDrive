@@ -31,11 +31,12 @@ class FolderPathResolver(
         return segments.joinToString("/")
     }
 
-    suspend fun resolveExisting(path: String): String? {
+    suspend fun resolveExisting(path: String, chatId: Long? = null): String? {
         if (path.isBlank()) return null
+        val owner = chatId ?: activeChannel.id()
         var parentId: String? = null
         for (segment in path.split('/').filter { it.isNotBlank() }.take(MAX_DEPTH)) {
-            val match = folderDao.childrenOf(parentId, activeChannel.id())
+            val match = folderDao.childrenOf(parentId, owner)
                 .firstOrNull { it.name.equals(segment, ignoreCase = true) }
                 ?: return null
             parentId = match.id
@@ -43,8 +44,10 @@ class FolderPathResolver(
         return parentId
     }
 
-    suspend fun exists(folderId: String?): Boolean =
-        folderId != null && folderDao.byId(folderId) != null
+    suspend fun exists(folderId: String?, chatId: Long): Boolean {
+        val folder = folderId?.let { folderDao.byId(it) } ?: return false
+        return folder.chatId == null || folder.chatId == chatId
+    }
 
     /**
      * A created leaf keeps [leafId], the identity another device gave it, unless that id was
@@ -53,22 +56,26 @@ class FolderPathResolver(
     suspend fun resolveOrCreate(
         path: String,
         leafId: String? = null,
-        startParentId: String? = null
+        startParentId: String? = null,
+        chatId: Long? = null
     ): String? {
         if (path.isBlank()) return startParentId
-        val reusableLeafId = leafId?.takeIf { tombstoneDao.idIfDeleted(it) == null }
+        val owner = chatId ?: activeChannel.id()
         return creationMutex.withLock {
+            val reusableLeafId = leafId?.takeIf {
+                tombstoneDao.idIfDeleted(it) == null && folderDao.byId(it) == null
+            }
             var parentId: String? = startParentId
             val segments = path.split('/').filter { it.isNotBlank() }.take(MAX_DEPTH)
             for ((index, segment) in segments.withIndex()) {
-                val existing = folderDao.childrenOf(parentId, activeChannel.id())
+                val existing = folderDao.childrenOf(parentId, owner)
                     .firstOrNull { it.name.equals(segment, ignoreCase = true) }
                 parentId = existing?.id ?: run {
                     val now = System.currentTimeMillis()
                     val folder = FolderEntity(
                         id = reusableLeafId.takeIf { index == segments.lastIndex }
                             ?: UUID.randomUUID().toString(),
-                        chatId = activeChannel.id(),
+                        chatId = owner,
                         parentId = parentId,
                         name = segment,
                         createdAt = now,

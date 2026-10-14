@@ -78,6 +78,7 @@ class TeleDriveApplication : Application(), SingletonImageLoader.Factory {
             transferRepository.recoverOrphanedTransfers()
             fileRepository.sweepImportOrphans()
             folderOwnershipRepair.runOnce()
+            folderOwnershipRepair.refileStrayFiles()
             publishScheduler.kick()
             trashRepository.repairTrashTree()
             val prefs = settingsRepository.preferences.first()

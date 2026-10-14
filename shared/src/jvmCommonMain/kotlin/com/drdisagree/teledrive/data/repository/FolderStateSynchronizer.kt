@@ -146,6 +146,7 @@ class FolderStateSynchronizer(
         var changed = 0
         for (entry in state.folders.sortedBy { depthOf(it, state.folders) }) {
             val existing = folderDao.byId(entry.id)
+            if (existing?.chatId != null && existing.chatId != chatId) continue
             if (existing != null && existing.changedAt >= entry.clock &&
                 existing.parentId == entry.parentId
             ) continue

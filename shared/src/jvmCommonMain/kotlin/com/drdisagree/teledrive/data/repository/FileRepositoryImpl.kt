@@ -109,12 +109,13 @@ class FileRepositoryImpl(
         val ids = mutableListOf<String>()
         var frontier = listOf(folderId)
         var guard = 0
+        val chatId = activeChannel.id()
         while (frontier.isNotEmpty() && guard++ < MAX_FOLDER_DEPTH) {
             for (id in frontier) {
-                ids += fileDao.filesInFolder(id).map { it.id }
+                ids += fileDao.filesInFolder(id, chatId).map { it.id }
             }
             frontier = frontier.flatMap { parent ->
-                folderDao.childrenOf(parent, activeChannel.id()).map { it.id }
+                folderDao.childrenOf(parent, chatId).map { it.id }
             }
         }
         return ids

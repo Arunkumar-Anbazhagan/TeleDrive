@@ -34,6 +34,7 @@ import com.drdisagree.teledrive.desktop.ui.LocalFullscreenController
 import com.drdisagree.teledrive.desktop.ui.ProvideDesktopPlatformActions
 import com.drdisagree.teledrive.desktop.window.WindowsTitleBar
 import com.drdisagree.teledrive.domain.model.AppTheme
+import com.drdisagree.teledrive.data.repository.FolderOwnershipRepair
 import com.drdisagree.teledrive.domain.repository.FileRepository
 import com.drdisagree.teledrive.domain.repository.SettingsRepository
 import com.drdisagree.teledrive.domain.repository.TransferRepository
@@ -75,6 +76,7 @@ fun main() {
     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
         runCatching { getKoin().get<TransferRepository>().recoverOrphanedTransfers() }
         runCatching { getKoin().get<FileRepository>().sweepImportOrphans() }
+        runCatching { getKoin().get<FolderOwnershipRepair>().refileStrayFiles() }
         getKoin().get<PublishScheduler>().kick()
         runCatching { getKoin().get<TrashRepository>().repairTrashTree() }
     }

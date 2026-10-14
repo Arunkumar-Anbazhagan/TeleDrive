@@ -59,20 +59,22 @@ class TrashRepositoryImpl(
     override suspend fun trashedChildCounts(folderIds: List<String>): Map<String, Int> {
         if (folderIds.isEmpty()) return emptyMap()
         val counts = mutableMapOf<String, Int>()
-        for (row in folderDao.trashedFolderCounts(folderIds)) {
+        val chatId = activeChannel.id()
+        for (row in folderDao.trashedFolderCounts(folderIds, chatId)) {
             counts[row.parentId] = (counts[row.parentId] ?: 0) + row.childCount
         }
-        for (row in fileDao.trashedFileCounts(folderIds)) {
+        for (row in fileDao.trashedFileCounts(folderIds, chatId)) {
             counts[row.parentId] = (counts[row.parentId] ?: 0) + row.childCount
         }
         return counts
     }
 
     override suspend fun trashedChildren(folderId: String): List<TrashItem> {
-        val folders = folderDao.trashedChildrenOf(listOf(folderId))
+        val chatId = activeChannel.id()
+        val folders = folderDao.trashedChildrenOf(listOf(folderId), chatId)
             .map { TrashItem.Folder(it.toDomain()) }
             .sortedBy { it.name.lowercase() }
-        val files = fileDao.trashedInFolders(listOf(folderId))
+        val files = fileDao.trashedInFolders(listOf(folderId), chatId)
             .map { TrashItem.File(it.toDomain()) }
             .sortedBy { it.name.lowercase() }
         return folders + files
@@ -86,7 +88,8 @@ class TrashRepositoryImpl(
 
     override suspend fun moveFolderToTrash(id: String): AppResult<Unit> {
         val descendants = collectDescendantFolderIds(id)
-        val fileIds = descendants.flatMap { fileDao.filesInFolder(it) }.map { it.id }
+        val chatId = activeChannel.id()
+        val fileIds = descendants.flatMap { fileDao.filesInFolder(it, chatId) }.map { it.id }
         val trashedAt = System.currentTimeMillis()
         fileIds.chunked(SQL_BATCH).forEach { fileDao.moveToTrash(it, trashedAt) }
         descendants.reversed().forEach { folderDao.moveToTrash(it, trashedAt) }
@@ -135,7 +138,7 @@ class TrashRepositoryImpl(
 
     override suspend fun restoreFolder(id: String): AppResult<Unit> {
         val folderIds = collectTrashedDescendantFolderIds(id)
-        val fileIds = fileDao.trashedInFolders(folderIds).map { it.id }
+        val fileIds = fileDao.trashedInFolders(folderIds, activeChannel.id()).map { it.id }
         val restoredAt = System.currentTimeMillis()
         folderIds.reversed().forEach { folderDao.restoreFromTrash(it, restoredAt) }
         restoreAncestors(folderDao.byId(id)?.parentId)
@@ -217,20 +220,22 @@ class TrashRepositoryImpl(
 
     override suspend fun deleteFolderPermanently(id: String): AppResult<Unit> {
         val folderIds = collectTrashedDescendantFolderIds(id)
-        val fileIds = fileDao.trashedInFolders(folderIds).map { it.id }
+        val chatId = activeChannel.id()
+        val fileIds = fileDao.trashedInFolders(folderIds, chatId).map { it.id }
         val result = deleteFilesPermanently(fileIds)
         if (result is AppResult.Failure) return result
-        recordDeleted(folderIds)
+        recordDeleted(folderIds.map { it to chatId })
         folderIds.reversed().forEach { folderDao.delete(it) }
         markFolderStateDirty()
         return AppResult.Success(Unit)
     }
 
-    private suspend fun recordDeleted(folderIds: List<String>) {
-        if (folderIds.isEmpty()) return
-        val chatId = activeChannel.id()
+    private suspend fun recordDeleted(folders: List<Pair<String, Long?>>) {
+        if (folders.isEmpty()) return
         val deletedAt = System.currentTimeMillis()
-        tombstoneDao.upsert(folderIds.map { FolderTombstoneEntity(it, chatId, deletedAt) })
+        tombstoneDao.upsert(
+            folders.map { (id, chatId) -> FolderTombstoneEntity(id, chatId, deletedAt) }
+        )
     }
 
     /** Only staging copies the app made are removed; the user's own files are never touched. */
@@ -241,7 +246,8 @@ class TrashRepositoryImpl(
     }
 
     override suspend fun emptyTrash(): AppResult<Unit> {
-        val files = fileDao.trashOlderThan(Long.MAX_VALUE)
+        val chatId = activeChannel.id()
+        val files = fileDao.trashInChat(chatId)
         SafeLog.d(TAG, "Emptying trash: ${files.size} files")
         var failure: AppResult.Failure? = null
         for (chunk in files.chunked(REMOTE_DELETE_BATCH)) {
@@ -249,8 +255,8 @@ class TrashRepositoryImpl(
             if (result is AppResult.Failure) failure = result
         }
         if (failure != null) return failure
-        val folders = folderDao.trashOlderThan(Long.MAX_VALUE)
-        recordDeleted(folders.map { it.id })
+        val folders = folderDao.trashInChat(chatId)
+        recordDeleted(folders.map { it.id to it.chatId })
         folders.forEach { folderDao.delete(it.id) }
         if (folders.isNotEmpty()) markFolderStateDirty()
         return AppResult.Success(Unit)
@@ -263,7 +269,7 @@ class TrashRepositoryImpl(
         val result = deleteFilesPermanently(files.map { it.id })
         if (result is AppResult.Failure) return result
         val folders = folderDao.trashOlderThan(threshold)
-        recordDeleted(folders.map { it.id })
+        recordDeleted(folders.map { it.id to it.chatId })
         folders.forEach { folderDao.delete(it.id) }
         if (folders.isNotEmpty()) markFolderStateDirty()
         return AppResult.Success(files.size + folders.size)
@@ -290,8 +296,9 @@ class TrashRepositoryImpl(
         val result = mutableListOf(rootId)
         var frontier = listOf(rootId)
         var guard = 0
+        val chatId = activeChannel.id()
         while (frontier.isNotEmpty() && guard++ < MAX_FOLDER_DEPTH) {
-            frontier = folderDao.trashedChildrenOf(frontier).map { it.id }
+            frontier = folderDao.trashedChildrenOf(frontier, chatId).map { it.id }
             result.addAll(frontier)
         }
         return result

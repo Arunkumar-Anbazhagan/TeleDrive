@@ -351,25 +351,48 @@ interface FileDao {
 
     @Query(
         """SELECT * FROM files
-           WHERE trashedAt IS NOT NULL AND preTrashFolderId IN (:folderIds)"""
+           WHERE trashedAt IS NOT NULL AND preTrashFolderId IN (:folderIds)
+             AND (chatId IS :chatId OR chatId IS NULL)"""
     )
-    suspend fun trashedInFolders(folderIds: List<String>): List<FileEntity>
+    suspend fun trashedInFolders(folderIds: List<String>, chatId: Long?): List<FileEntity>
 
     @Query(
         """SELECT preTrashFolderId AS parentId, COUNT(*) AS childCount FROM files
            WHERE trashedAt IS NOT NULL AND preTrashFolderId IN (:folderIds)
+             AND (chatId IS :chatId OR chatId IS NULL)
            GROUP BY preTrashFolderId"""
     )
-    suspend fun trashedFileCounts(folderIds: List<String>): List<TrashChildCount>
+    suspend fun trashedFileCounts(folderIds: List<String>, chatId: Long?): List<TrashChildCount>
 
     @Query("SELECT * FROM files WHERE trashedAt IS NOT NULL AND trashedAt < :threshold")
     suspend fun trashOlderThan(threshold: Long): List<FileEntity>
 
+    @Query("SELECT * FROM files WHERE trashedAt IS NOT NULL AND chatId IS :chatId")
+    suspend fun trashInChat(chatId: Long?): List<FileEntity>
+
     @Query("DELETE FROM files WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>)
 
-    @Query("SELECT * FROM files WHERE folderId = :folderId AND trashedAt IS NULL")
-    suspend fun filesInFolder(folderId: String): List<FileEntity>
+    @Query(
+        """SELECT * FROM files
+           WHERE folderId = :folderId AND trashedAt IS NULL
+             AND (chatId IS :chatId OR chatId IS NULL)"""
+    )
+    suspend fun filesInFolder(folderId: String, chatId: Long?): List<FileEntity>
+
+    @Query(
+        """SELECT files.* FROM files
+           JOIN folders ON folders.id = COALESCE(files.folderId, files.preTrashFolderId)
+           WHERE files.chatId IS NOT NULL AND folders.chatId IS NOT NULL
+             AND files.chatId != folders.chatId"""
+    )
+    suspend fun strayFiles(): List<FileEntity>
+
+    @Query("UPDATE files SET preTrashFolderId = :folderId WHERE id = :id")
+    suspend fun setPreTrashFolder(id: String, folderId: String?)
+
+    @Query("SELECT COUNT(*) FROM files WHERE folderId = :folderId OR preTrashFolderId = :folderId")
+    suspend fun countInFolder(folderId: String): Int
 
     @Query("SELECT * FROM files WHERE messageId IS NOT NULL")
     suspend fun filesWithRemote(): List<FileEntity>

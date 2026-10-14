@@ -117,11 +117,11 @@ class FileDaoTest {
         val folderRoots = database.folderDao().observeTrashRoots().first()
         assertEquals(listOf("dir"), folderRoots.map { it.id })
 
-        val nestedIds = database.folderDao().trashedChildrenOf(listOf("dir")).map { it.id }
+        val nestedIds = database.folderDao().trashedChildrenOf(listOf("dir"), null).map { it.id }
         assertEquals(listOf("nested"), nestedIds)
         assertEquals(
             listOf("a", "b"),
-            database.fileDao().trashedInFolders(listOf("dir", "nested"))
+            database.fileDao().trashedInFolders(listOf("dir", "nested"), null)
                 .map { it.id }
                 .sorted()
         )

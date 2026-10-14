@@ -117,7 +117,7 @@ class BackupRepositoryImpl(
         for (candidate in candidates) {
             if (backupDao.recordByPath(candidate.absolutePath) == null &&
                 (adoptLinkedUpload(candidate) ||
-                        reviveTrashedUpload(candidate) ||
+                        reviveTrashedUpload(candidate, activeChatId) ||
                         adoptUploadedCopy(candidate, activeChatId))
             ) {
                 skipped++
@@ -172,7 +172,9 @@ class BackupRepositoryImpl(
         backupDao.upsertSession(session)
 
         for (batch in toBackup.chunked(ENQUEUE_BATCH)) {
-            val fileIds = batch.map { registerFile(it, backupFolderIdFor(it), activeChatId) }
+            val fileIds = batch.map {
+                registerFile(it, backupFolderIdFor(it, activeChatId), activeChatId)
+            }
             transferRepository.enqueueBackupBatch(fileIds, session.id)
         }
         return AppResult.Success(session.id)
@@ -193,10 +195,10 @@ class BackupRepositoryImpl(
     }
 
     /** A file trashed in the app but still on disk is restored instead of uploaded again. */
-    private suspend fun reviveTrashedUpload(candidate: File): Boolean {
+    private suspend fun reviveTrashedUpload(candidate: File, chatId: Long?): Boolean {
         val revived = fileRepository.reviveTrashedCopy(
             localPath = candidate.absolutePath,
-            folderId = backupFolderIdFor(candidate)
+            folderId = backupFolderIdFor(candidate, chatId)
         ) ?: return false
         if (!revived.hasRemoteCopy) return false
         recordBackedUp(candidate, revived.id, revived.contentHash)
@@ -238,10 +240,14 @@ class BackupRepositoryImpl(
     }
 
     /** Backed-up files share the drive tree with manual uploads instead of a separate silo. */
-    private suspend fun backupFolderIdFor(source: File): String? {
+    private suspend fun backupFolderIdFor(source: File, chatId: Long?): String? {
         val parent = source.parentFile?.absolutePath ?: return null
         val relative = relativeToStorageRoot(parent)
-        return if (relative.isEmpty()) null else folderPathResolver.resolveOrCreate(relative)
+        return if (relative.isEmpty()) {
+            null
+        } else {
+            folderPathResolver.resolveOrCreate(relative, chatId = chatId)
+        }
     }
 
     private fun relativeToStorageRoot(absolutePath: String): String {
