@@ -65,6 +65,9 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
+import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -111,11 +114,18 @@ fun MediaPlayer(
 
     val holder = remember(content) { mutableStateOf<ExoPlayer?>(null) }
     val player = holder.value
+    val failedDecoders = remember(content) { mutableSetOf<String>() }
 
     LaunchedEffect(holder, isActivePage) {
         if (!isActivePage || holder.value != null) return@LaunchedEffect
         val renderers = DefaultRenderersFactory(context)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setEnableDecoderFallback(true)
+            .setMediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
+                MediaCodecSelector.DEFAULT
+                    .getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
+                    .filterNot { it.name in failedDecoders }
+            }
         holder.value = ExoPlayer.Builder(context, renderers).build().apply {
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setPreferredAudioLanguage(audioLanguage.ifEmpty { null })
@@ -205,8 +215,14 @@ fun MediaPlayer(
                     PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
                     PlaybackException.ERROR_CODE_DECODING_FAILED,
                     PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-                    PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                        decoderFailed = true
+                    PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED -> {
+                        val decoder = error.failedDecoderName()
+                        if (decoder != null && failedDecoders.add(decoder)) {
+                            player.prepare()
+                        } else {
+                            decoderFailed = true
+                        }
+                    }
 
                     else -> playbackFailed = true
                 }
@@ -514,3 +530,14 @@ private const val LIGHT_LUMINANCE = 0.5f
 private val AUDIO_ICON_SIZE = 96.dp
 
 private val ARTWORK_SIZE = 260.dp
+
+@OptIn(UnstableApi::class)
+private fun PlaybackException.failedDecoderName(): String? =
+    generateSequence<Throwable>(this) { it.cause }
+        .firstNotNullOfOrNull { cause ->
+            when (cause) {
+                is MediaCodecRenderer.DecoderInitializationException -> cause.codecInfo?.name
+                is MediaCodecDecoderException -> cause.codecInfo?.name
+                else -> null
+            }
+        }
