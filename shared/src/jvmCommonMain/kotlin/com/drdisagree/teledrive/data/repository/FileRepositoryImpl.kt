@@ -511,7 +511,7 @@ class FileRepositoryImpl(
     ): AppResult<DriveFile> {
         val source = File(localPath)
         if (!source.exists() || !source.isFile) return AppResult.Failure(AppError.NotFound)
-        fileDao.byLocalPath(localPath)?.takeIf { it.trashedAt == null }?.let {
+        fileDao.byLocalPath(localPath, activeChannel.id())?.takeIf { it.trashedAt == null }?.let {
             return AppResult.Success(it.toDomain())
         }
         reviveTrashedCopy(localPath, folderId)?.let { return AppResult.Success(it) }
@@ -648,7 +648,7 @@ class FileRepositoryImpl(
         if (!source.exists() || !source.isFile) return null
 
         // Rows without a remote copy do not count, so an interrupted upload can be retried.
-        fileDao.byLocalPath(source.absolutePath)
+        fileDao.byLocalPath(source.absolutePath, activeChannel.id())
             ?.takeIf { it.trashedAt == null && it.messageId != null }
             ?.let { return it.toDomain() }
 

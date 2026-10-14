@@ -237,7 +237,8 @@ class TransferExecutor(
                                     sizeBytes = uploadSize,
                                     modifiedAt = sourceFile.lastModified(),
                                     contentHash = contentHash,
-                                    backedUpAt = System.currentTimeMillis()
+                                    backedUpAt = System.currentTimeMillis(),
+                                    chatId = document.chatId
                                 )
                             )
                         }
@@ -356,7 +357,8 @@ class TransferExecutor(
                                         sizeBytes = manifest.sizeBytes,
                                         modifiedAt = sourceFile.lastModified(),
                                         contentHash = contentHash,
-                                        backedUpAt = System.currentTimeMillis()
+                                        backedUpAt = System.currentTimeMillis(),
+                                        chatId = first.chatId
                                     )
                                 )
                             }

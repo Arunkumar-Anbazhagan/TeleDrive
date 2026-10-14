@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "backup_records",
-    indices = [Index(value = ["sourcePath"], unique = true), Index("contentHash")]
+    indices = [Index(value = ["sourcePath", "chatId"], unique = true), Index("contentHash")]
 )
 data class BackupRecordEntity(
     @PrimaryKey val id: String,
@@ -15,5 +15,6 @@ data class BackupRecordEntity(
     val sizeBytes: Long,
     val modifiedAt: Long,
     val contentHash: String?,
-    val backedUpAt: Long
+    val backedUpAt: Long,
+    val chatId: Long?
 )

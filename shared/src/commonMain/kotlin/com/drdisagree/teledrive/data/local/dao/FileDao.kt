@@ -70,8 +70,8 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE id IN (:ids)")
     fun observeByIds(ids: List<String>): Flow<List<FileEntity>>
 
-    @Query("SELECT * FROM files WHERE localPath = :path LIMIT 1")
-    suspend fun byLocalPath(path: String): FileEntity?
+    @Query("SELECT * FROM files WHERE localPath = :path AND chatId IS :chatId LIMIT 1")
+    suspend fun byLocalPath(path: String, chatId: Long?): FileEntity?
 
     @Query(
         """SELECT * FROM files

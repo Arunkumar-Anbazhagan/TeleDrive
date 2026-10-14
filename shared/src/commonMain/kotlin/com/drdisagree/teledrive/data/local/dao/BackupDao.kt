@@ -46,8 +46,8 @@ interface BackupDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertRecord(record: BackupRecordEntity)
 
-    @Query("SELECT * FROM backup_records WHERE sourcePath = :sourcePath")
-    suspend fun recordByPath(sourcePath: String): BackupRecordEntity?
+    @Query("SELECT * FROM backup_records WHERE sourcePath = :sourcePath AND chatId IS :chatId")
+    suspend fun recordByPath(sourcePath: String, chatId: Long?): BackupRecordEntity?
 
     @Query("DELETE FROM backup_records WHERE fileId IN (:fileIds)")
     suspend fun deleteRecordsForFiles(fileIds: List<String>)

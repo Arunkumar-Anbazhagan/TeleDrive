@@ -115,15 +115,15 @@ class BackupRepositoryImpl(
         val reasons = mutableMapOf<BackupDecision, Int>()
         val toBackup = mutableListOf<File>()
         for (candidate in candidates) {
-            if (backupDao.recordByPath(candidate.absolutePath) == null &&
-                (adoptLinkedUpload(candidate) ||
+            if (backupDao.recordByPath(candidate.absolutePath, activeChatId) == null &&
+                (adoptLinkedUpload(candidate, activeChatId) ||
                         reviveTrashedUpload(candidate, activeChatId) ||
                         adoptUploadedCopy(candidate, activeChatId))
             ) {
                 skipped++
                 continue
             }
-            val record = backupDao.recordByPath(candidate.absolutePath)
+            val record = backupDao.recordByPath(candidate.absolutePath, activeChatId)
             val mime = MimeTypes.fromFileName(candidate.name)
             val decision = decideBackupAction(
                 candidate = ExclusionCandidate(
@@ -184,12 +184,12 @@ class BackupRepositoryImpl(
      * A file uploaded by hand already has a remote mapping, so adding its folder to backup claims
      * it instead.
      */
-    private suspend fun adoptLinkedUpload(candidate: File): Boolean {
-        val existing = fileDao.byLocalPath(candidate.absolutePath) ?: return false
+    private suspend fun adoptLinkedUpload(candidate: File, chatId: Long?): Boolean {
+        val existing = fileDao.byLocalPath(candidate.absolutePath, chatId) ?: return false
         if (existing.messageId == null || existing.backupState != BackupState.BACKED_UP) {
             return false
         }
-        recordBackedUp(candidate, existing.id, existing.contentHash)
+        recordBackedUp(candidate, existing.id, existing.contentHash, chatId)
         SafeLog.d(TAG, "Claimed a manual upload already stored at this path")
         return true
     }
@@ -201,7 +201,7 @@ class BackupRepositoryImpl(
             folderId = backupFolderIdFor(candidate, chatId)
         ) ?: return false
         if (!revived.hasRemoteCopy) return false
-        recordBackedUp(candidate, revived.id, revived.contentHash)
+        recordBackedUp(candidate, revived.id, revived.contentHash, chatId)
         SafeLog.d(TAG, "Restored a trashed file instead of uploading a copy")
         return true
     }
@@ -220,12 +220,17 @@ class BackupRepositoryImpl(
             ?: return false
 
         fileDao.setLocalPath(match.id, candidate.absolutePath)
-        recordBackedUp(candidate, match.id, localHash)
+        recordBackedUp(candidate, match.id, localHash, chatId)
         SafeLog.d(TAG, "Linked an existing upload to its local copy")
         return true
     }
 
-    private suspend fun recordBackedUp(candidate: File, fileId: String, contentHash: String?) {
+    private suspend fun recordBackedUp(
+        candidate: File,
+        fileId: String,
+        contentHash: String?,
+        chatId: Long?
+    ) {
         backupDao.upsertRecord(
             BackupRecordEntity(
                 id = UUID.randomUUID().toString(),
@@ -234,7 +239,8 @@ class BackupRepositoryImpl(
                 sizeBytes = candidate.length(),
                 modifiedAt = candidate.lastModified(),
                 contentHash = contentHash,
-                backedUpAt = System.currentTimeMillis()
+                backedUpAt = System.currentTimeMillis(),
+                chatId = chatId
             )
         )
     }
@@ -274,7 +280,7 @@ class BackupRepositoryImpl(
         folderId: String?,
         chatId: Long?
     ): String {
-        fileDao.byLocalPath(source.absolutePath)?.let { existing ->
+        fileDao.byLocalPath(source.absolutePath, chatId)?.let { existing ->
             val changed = existing.sizeBytes != source.length() ||
                     existing.modifiedAt != source.lastModified()
             if (changed) {

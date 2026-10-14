@@ -45,7 +45,7 @@ import com.drdisagree.teledrive.data.local.entity.TransferEntity
         ProxyEntity::class,
         FolderTombstoneEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @ConstructedBy(TeleDriveDatabaseConstructor::class)

@@ -4,6 +4,21 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `backup_records` ADD COLUMN `chatId` INTEGER")
+        connection.execSQL(
+            "UPDATE `backup_records` SET `chatId` = " +
+                    "(SELECT `chatId` FROM `files` WHERE `files`.`id` = `backup_records`.`fileId`)"
+        )
+        connection.execSQL("DROP INDEX IF EXISTS `index_backup_records_sourcePath`")
+        connection.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_backup_records_sourcePath_chatId` " +
+                    "ON `backup_records` (`sourcePath`, `chatId`)"
+        )
+    }
+}
+
 /**
  * Rebuilds the tables since SQLite has RENAME COLUMN only from 3.25 (API 30). Room turns
  * foreign keys on after migrating, so dropping the old tables cascades nothing.
