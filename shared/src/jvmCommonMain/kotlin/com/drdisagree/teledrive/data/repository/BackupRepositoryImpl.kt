@@ -177,6 +177,10 @@ class BackupRepositoryImpl(
             }
             transferRepository.enqueueBackupBatch(fileIds, session.id)
         }
+        backupSessionTracker.refresh(session.id)
+        if (backupDao.sessionById(session.id)?.status == BackupSessionStatus.CANCELLED) {
+            return AppResult.Success(null)
+        }
         return AppResult.Success(session.id)
     }
 

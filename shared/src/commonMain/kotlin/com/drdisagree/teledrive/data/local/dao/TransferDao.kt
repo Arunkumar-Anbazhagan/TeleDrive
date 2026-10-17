@@ -26,6 +26,12 @@ interface TransferDao {
     )
     suspend fun unfinishedFileIds(fileIds: List<String>): List<String>
 
+    @Query(
+        """UPDATE transfers SET backupSessionId = :sessionId
+           WHERE fileId IN (:fileIds) AND state IN ('QUEUED', 'RUNNING')"""
+    )
+    suspend fun adoptIntoSession(fileIds: List<String>, sessionId: String)
+
     @Update
     suspend fun update(transfer: TransferEntity)
 

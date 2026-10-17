@@ -151,6 +151,9 @@ class TransferRepositoryImpl(
 
         for (chunk in fileIds.chunked(SQL_BATCH)) {
             val alreadyQueued = transferDao.unfinishedFileIds(chunk).toSet()
+            if (sessionId != null && alreadyQueued.isNotEmpty()) {
+                transferDao.adoptIntoSession(alreadyQueued.toList(), sessionId)
+            }
             val now = System.currentTimeMillis()
             val transfers = mutableListOf<TransferEntity>()
             for (fileId in chunk) {
