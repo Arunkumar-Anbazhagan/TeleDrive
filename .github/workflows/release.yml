@@ -90,6 +90,45 @@ jobs:
           path: desktop/build/deb/*.deb
           if-no-files-found: error
 
+  appimage:
+    name: Linux AppImage
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Install packaging tools and libVLC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils patchelf \
+            libvlc5 libvlccore9 vlc-plugin-base vlc-plugin-video-output
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
+          curl -fsSL -o "$RUNNER_TEMP/linuxdeploy" \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool" "$RUNNER_TEMP/linuxdeploy"
+
+      - name: Package AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: >-
+          ./gradlew :desktop:packageAppImage
+          -Pappimagetool="$RUNNER_TEMP/appimagetool"
+          -Plinuxdeploy="$RUNNER_TEMP/linuxdeploy"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: appimage-release
+          path: desktop/build/appimage/*.AppImage
+          if-no-files-found: error
+
   macos:
     name: macOS
     runs-on: macos-latest
@@ -116,7 +155,7 @@ jobs:
   publish:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/') && always() && needs.android.result == 'success' && needs.windows.result == 'success'
-    needs: [android, windows, linux, macos]
+    needs: [android, windows, linux, appimage, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -126,6 +165,12 @@ jobs:
         run: >-
           echo "::warning title=No Linux artifact::Linux packaging did not
           succeed (${{ needs.linux.result }}), so this draft has no .deb."
+
+      - name: Report a missing AppImage build
+        if: needs.appimage.result != 'success'
+        run: >-
+          echo "::warning title=No AppImage artifact::AppImage packaging did not
+          succeed (${{ needs.appimage.result }}), so this draft has no AppImage."
 
       - name: Report a missing macOS build
         if: needs.macos.result != 'success'
@@ -145,4 +190,5 @@ jobs:
             artifacts/*.apk
             artifacts/*.msi
             artifacts/*.deb
+            artifacts/*.AppImage
             artifacts/*.dmg

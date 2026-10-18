@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TeleDrive
+Comment=Cloud storage backed by your Telegram account
+Exec=TeleDrive
+Icon=teledrive
+Categories=Network;FileTransfer;
+Terminal=false

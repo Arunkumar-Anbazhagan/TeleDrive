@@ -7,8 +7,8 @@ import uk.co.caprica.vlcj.factory.MediaPlayerFactory
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 
 /**
- * Prefers the bundled libVLC (Windows, macOS), then the distro or system VLC; without either,
- * previews keep the external player.
+ * Prefers the bundled libVLC (Windows, macOS, Linux AppImage), then the distro or system VLC;
+ * without either, previews keep the external player.
  */
 object VlcPlayback {
 
@@ -33,6 +33,7 @@ object VlcPlayback {
     }
 
     private fun bundled(): VlcBundle? {
+        appImageBundle()?.let { return it }
         val root = System.getProperty("compose.application.resources.dir")
             ?.let { File(it, "vlc") }
             ?: return null
@@ -41,6 +42,12 @@ object VlcPlayback {
         val libraries = File(root, "lib")
         if (!File(libraries, "libvlc.dylib").exists()) return null
         return VlcBundle(libraries, File(root, "plugins").takeIf { it.isDirectory })
+    }
+
+    private fun appImageBundle(): VlcBundle? {
+        val libraries = System.getenv("APPDIR")?.let { File(it, "usr/lib") } ?: return null
+        if (!File(libraries, "libvlc.so.5").exists()) return null
+        return VlcBundle(libraries, File(libraries, "vlc/plugins").takeIf { it.isDirectory })
     }
 
     private fun setPluginPath(plugins: File) {

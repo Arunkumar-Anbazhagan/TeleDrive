@@ -430,3 +430,31 @@ case "${'$'}1" in
 esac
 exit 0
 """
+
+val appImageTool = providers.gradleProperty("appimagetool").orElse("appimagetool")
+val linuxDeployTool = providers.gradleProperty("linuxdeploy").orElse("linuxdeploy")
+
+val packageAppImage = tasks.register("packageAppImage") {
+    description = "Builds a portable x86_64 AppImage with libVLC bundled, using linuxdeploy and appimagetool"
+    group = "distribution"
+    dependsOn("createDistributable")
+    val appImage = layout.buildDirectory.dir("compose/binaries/main/app/TeleDrive").map { it.asFile }
+    val packaging = layout.projectDirectory.dir("packaging/linux")
+    val script = packaging.file("build-appimage.sh").asFile
+    val icon = layout.projectDirectory.file("icons/TeleDrive.png").asFile
+    val output = layout.buildDirectory.file("appimage/TeleDrive-${debVersion}-x86_64.AppImage").map { it.asFile }
+    val tools = mapOf("APPIMAGETOOL" to appImageTool, "LINUXDEPLOY" to linuxDeployTool)
+    inputs.dir(appImage)
+    inputs.dir(packaging)
+    inputs.file(icon)
+    outputs.file(output)
+    doLast {
+        val process = ProcessBuilder(
+            "sh", script.absolutePath, appImage.get().absolutePath, icon.absolutePath,
+            output.get().absolutePath
+        ).inheritIO()
+        tools.forEach { (name, path) -> process.environment()[name] = path.get() }
+        val exitCode = process.start().waitFor()
+        check(exitCode == 0) { "build-appimage.sh failed with exit code $exitCode" }
+    }
+}

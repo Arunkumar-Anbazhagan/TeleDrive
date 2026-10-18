@@ -42,7 +42,7 @@
   "description": "Back up and browse your files using a private channel on your own Telegram account as storage. No file size limit, optional AES-256-GCM encryption, no server in between.",
   "applicationCategory": "UtilitiesApplication",
   "applicationSubCategory": "Cloud storage",
-  "operatingSystem": "Android 8.0+, Windows 10+, Ubuntu x86_64, macOS (Apple Silicon)",
+  "operatingSystem": "Android 8.0+, Windows 10+, Linux x86_64, macOS (Apple Silicon)",
   "softwareVersion": "1.4.2",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "url": "https://mahmud0808.github.io/TeleDrive/",
@@ -377,9 +377,9 @@
             <svg class="build__icon" aria-hidden="true"><use href="#i-linux"/></svg>
             <div class="build__name">
               <h4 class="build__title" id="b-linux">Linux<span class="tag tag--yours">Your system</span></h4>
-              <p class="build__req">Ubuntu, x86_64</p>
+              <p class="build__req">Any distro, x86_64</p>
             </div>
-            <p class="build__file"><span data-slot="file">Debian package</span> <span class="build__size" data-slot="size"></span></p>
+            <p class="build__file"><span data-slot="file">AppImage</span> <span class="build__size" data-slot="size"></span></p>
             <p class="build__count" data-needs-data><span data-slot="count"></span> downloads</p>
             <div class="build__actions">
               <button class="build__more" type="button" aria-expanded="false" aria-controls="notes-linux">
@@ -390,9 +390,18 @@
               </a>
             </div>
             <div class="build__notes" id="notes-linux" hidden>
-              <div class="build__notes-inner"><p>apt resolves OpenSSL, zlib and the libVLC packages that drive playback. The package carries its own Java runtime.</p>
+              <div class="build__notes-inner">
+                <div data-slot="appimage-note"><p>Most distros from 2022 or later. Nothing else to install.</p>
+                  <div class="cmd">
+                    <code data-slot="command">chmod +x TeleDrive-&lt;version&gt;-x86_64.AppImage &amp;&amp; ./TeleDrive-&lt;version&gt;-x86_64.AppImage</code>
+                    <button class="cmd__copy" type="button" data-copy aria-label="Copy run command">
+                      <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
+                    </button>
+                  </div>
+                </div>
+                <p>Or the .deb on Ubuntu 24.04, Debian 13 or newer:</p>
                 <div class="cmd">
-                  <code data-slot="command">sudo apt install ./teledrive_&lt;version&gt;_amd64.deb</code>
+                  <code data-slot="deb-command">sudo apt install ./teledrive_&lt;version&gt;_amd64.deb</code>
                   <button class="cmd__copy" type="button" data-copy aria-label="Copy install command">
                     <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
                   </button>

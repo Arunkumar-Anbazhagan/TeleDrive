@@ -16,7 +16,7 @@
   const PLATFORMS = {
     android: { label: "Android", pick: /-arm64-v8a-release\.apk$/i, family: /\.apk$/i },
     windows: { label: "Windows", pick: /\.msi$/i, family: /\.msi$/i },
-    linux: { label: "Linux", pick: /_amd64\.deb$/i, family: /\.deb$/i },
+    linux: { label: "Linux", pick: /-x86_64\.AppImage$/i, fallback: /_amd64\.deb$/i, family: /\.(AppImage|deb)$/i },
     macos: { label: "macOS", pick: /\.dmg$/i, family: /\.dmg$/i },
   };
 
@@ -273,7 +273,7 @@
 
   const renderPlatform = (item, key, releases, latest) => {
     const spec = PLATFORMS[key];
-    const found = newestAsset(releases, spec.pick);
+    const found = newestAsset(releases, spec.pick) || (spec.fallback && newestAsset(releases, spec.fallback));
     const link = item.querySelector('[data-slot="link"]');
 
     if (!found) {
@@ -289,8 +289,15 @@
     setText('[data-slot="size"]', `${formatSize(found.asset.size)}${olderNote}`, item);
     setText('[data-slot="count"]', numberFormat.format(sumDownloads(releases, spec.family)), item);
 
+    const name = found.asset.name;
+    const isAppImage = /\.AppImage$/i.test(name);
     const command = item.querySelector('[data-slot="command"]');
-    if (command) swapText(command, `sudo apt install ./${found.asset.name}`);
+    if (command && isAppImage) swapText(command, `chmod +x ${name} && ./${name}`);
+    const appImageNote = item.querySelector('[data-slot="appimage-note"]');
+    if (appImageNote) appImageNote.hidden = !isAppImage;
+    const debCommand = item.querySelector('[data-slot="deb-command"]');
+    const deb = debCommand && newestAsset(releases, /_amd64\.deb$/i);
+    if (deb) swapText(debCommand, `sudo apt install ./${deb.asset.name}`);
 
     const list = item.querySelector('[data-slot="variants"]');
     if (list) renderVariants(list, found.release);

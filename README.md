@@ -8,7 +8,7 @@ Back up and browse your files using a private Telegram channel as storage.
 
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#requirements)
 [![Windows](https://img.shields.io/badge/Windows-10%2B-0078D4?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0wIDMuNDQ5IDkuNzUgMi4xdjkuNDUxSDB6bTEwLjk0OS0xLjUwMUwyNCAwdjExLjRIMTAuOTQ5ek0wIDEyLjZoOS43NXY5LjQ1MUwwIDIwLjY5OXptMTAuOTQ5IDBIMjRWMjRsLTEzLjA1MS0xLjgwMXoiLz48L3N2Zz4%3D)](#requirements)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-x86__64-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](#requirements)
+[![Linux](https://img.shields.io/badge/Linux-x86__64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#requirements)
 [![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon-111111?style=for-the-badge&logo=apple&logoColor=white)](#requirements)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Compose%20Multiplatform-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/compose-multiplatform/)
@@ -24,7 +24,7 @@ Back up and browse your files using a private Telegram channel as storage.
 ## Contents
 
 - [About](#about) · [Features](#features) · [Screenshots](#screenshots)
-- **Install**: [Windows](#windows) · [Linux (Ubuntu x86_64)](#linux-ubuntu-x86_64) · [macOS (Apple Silicon)](#macos-apple-silicon) · [Android](#android)
+- **Install**: [Windows](#windows) · [Linux (x86_64)](#linux-x86_64) · [macOS (Apple Silicon)](#macos-apple-silicon) · [Android](#android)
 - [Requirements](#requirements) · [Getting started](#getting-started) · [Packaging the desktop app](#packaging-the-desktop-app)
 - [Bringing existing files in](#bringing-existing-files-in) · [Good to know](#good-to-know)
 - [Architecture](#architecture) · [Security model](#security-model) · [Testing](#testing)
@@ -38,7 +38,7 @@ TeleDrive stores your files in a private Telegram channel on your own account.
 There is no TeleDrive server and no account to create with us. The app keeps a
 local index so browsing and search stay fast and work offline.
 
-One Compose Multiplatform codebase ships the Android app and the Windows, Ubuntu
+One Compose Multiplatform codebase ships the Android app and the Windows, Linux
 x86_64 and macOS desktop apps. They share the storage engine, encryption,
 transfers and the entire UI layer, and all of them browse the same drive.
 
@@ -71,27 +71,25 @@ run it. It installs per user with no admin prompt, adds Start menu and desktop
 shortcuts, and uninstalls from Windows Settings. Your session and settings live
 in `%APPDATA%\TeleDrive` and survive reinstalls.
 
-### Linux (Ubuntu x86_64)
+### Linux (x86_64)
 
-Download `teledrive_<version>_amd64.deb` from the [releases page](../../releases)
-and install it:
+Download from the [releases page](../../releases). Everything is included, so
+there is nothing else to install.
+
+**AppImage** (most distros from 2022 or later)
+
+1. Download `TeleDrive-<version>-x86_64.AppImage`.
+2. Make it executable: right-click → **Properties** → **Allow executing file as
+   program**, or `chmod +x TeleDrive-<version>-x86_64.AppImage`.
+3. Double-click it.
+
+**.deb** (Ubuntu 24.04, Debian 13 or newer)
 
 ```bash
-sudo apt install ./teledrive_1.4.2_amd64.deb
+sudo apt install ./teledrive_<version>_amd64.deb
 ```
 
-`apt` resolves the system libraries automatically (OpenSSL, zlib, libstdc++ and
-the libVLC packages that drive inline playback). The package bundles its own
-Java runtime, so **no JDK is required**. Launch TeleDrive from the applications
-menu, or run `/opt/teledrive/bin/TeleDrive`. Your session and settings live in
-`~/.local/share/TeleDrive`.
-
-Media preview works out of the box. Unlike the Windows build, which ships its
-own copy of libVLC, the `.deb` depends on the distro's `libvlc5`,
-`vlc-plugin-base` and `vlc-plugin-video-output`, so playback stays on your
-distro's security updates. If libVLC ever fails to load, the app still opens,
-browses, uploads and downloads, and preview falls back to opening the file with
-your default application.
+Then open TeleDrive from the applications menu.
 
 ### macOS (Apple Silicon)
 
@@ -133,7 +131,7 @@ library the app is built on.
 
 ## Requirements
 
-- Android 8.0 (API 26) or newer, 64-bit Windows 10+, Ubuntu x86_64, or macOS on
+- Android 8.0 (API 26) or newer, 64-bit Windows 10+, Linux x86_64, or macOS on
   Apple Silicon
 - A Telegram account
 - Your own Telegram API credentials, free from
@@ -183,6 +181,7 @@ Point the build at a full JDK with a `desktopJavaHome` property in your global
 ```bash
 ./gradlew :desktop:packageMsi           # Windows installer
 ./gradlew :desktop:packageDebUser       # Linux .deb with system dependencies
+./gradlew :desktop:packageAppImage      # Linux AppImage for any distro
 ./gradlew :desktop:packageDmg           # macOS disk image
 ./gradlew :desktop:createDistributable  # portable app folder
 ```
@@ -191,6 +190,20 @@ Point the build at a full JDK with a `desktopJavaHome` property in your global
 embeds a JVM runtime via jlink and declares its Debian dependencies, so end
 users only need `sudo apt install ./teledrive_<version>_amd64.deb`. libVLC is
 not bundled on Linux, it is pulled in as a package dependency instead.
+
+`packageAppImage` produces
+`desktop/build/appimage/TeleDrive-<version>-x86_64.AppImage` from the same app
+folder and bundles the libVLC installed on the build machine along with the
+libraries its plugins need. It runs
+[`desktop/packaging/linux/build-appimage.sh`](desktop/packaging/linux/build-appimage.sh),
+which needs `patchelf`, `desktop-file-utils`, the `libvlc5`, `libvlccore9`,
+`vlc-plugin-base` and `vlc-plugin-video-output` packages,
+[linuxdeploy](https://github.com/linuxdeploy/linuxdeploy) and
+[appimagetool](https://github.com/AppImage/appimagetool). Put the last two on
+the `PATH`, or pass `-Plinuxdeploy=/path/to/linuxdeploy` and
+`-Pappimagetool=/path/to/appimagetool`. Build on the oldest distro you want to
+support, since the bundled libraries set the minimum glibc; release builds use
+Ubuntu 22.04.
 
 ## Bringing existing files in
 
