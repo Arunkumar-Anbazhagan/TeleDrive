@@ -430,17 +430,13 @@ class SyncRepositoryImpl(
             it.pendingPublish && (manifest == null || it.modifiedAt >= manifest.modifiedAt)
         }
 
-        val remoteFolderId = when {
+        val folderId = when {
+            local != null -> local.folderId ?: local.preTrashFolderId
             manifest == null -> existing?.folderId
             laterPart -> manifest.folderId?.takeIf {
                 folderPathResolver.exists(it, document.chatId)
             }
             else -> resolveFolder(manifest, folderCache, document.chatId)
-        }
-        val folderId = if (local != null) {
-            local.folderId ?: local.preTrashFolderId
-        } else {
-            remoteFolderId
         }
         val folderTrashedAt = folderId?.let { folderDao.byId(it)?.trashedAt }
 
