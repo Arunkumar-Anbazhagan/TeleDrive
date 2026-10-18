@@ -5,6 +5,7 @@ import com.drdisagree.teledrive.core.crypto.cryptoModule
 import com.drdisagree.teledrive.core.dispatchers.dispatchersModule
 import com.drdisagree.teledrive.core.files.filesModule
 import com.drdisagree.teledrive.core.files.sharedFilesModule
+import com.drdisagree.teledrive.core.logging.debugLogModule
 import com.drdisagree.teledrive.core.media.mediaModule
 import com.drdisagree.teledrive.core.network.networkModule
 import com.drdisagree.teledrive.core.power.powerModule
@@ -45,6 +46,7 @@ val appModules = listOf(
     repositoryModule,
     localDataModule,
     sharedFilesModule,
+    debugLogModule,
     transferEngineModule,
     useCaseModule,
     presentationModule

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.drdisagree.teledrive.core.common.AppResult
 import com.drdisagree.teledrive.core.files.DeleteConsentRequest
+import com.drdisagree.teledrive.core.logging.DebugLogRecorder
 import com.drdisagree.teledrive.core.permissions.PermissionChecker
 import com.drdisagree.teledrive.core.security.AppLockManager
 import com.drdisagree.teledrive.core.telegram.TelegramClient
@@ -24,6 +25,7 @@ import com.drdisagree.teledrive.domain.repository.SyncRepository
 import com.drdisagree.teledrive.domain.repository.TelegramAuthRepository
 import com.drdisagree.teledrive.presentation.common.UiText
 import com.drdisagree.teledrive.presentation.common.toUiText
+import com.drdisagree.teledrive.presentation.files.ShareRequest
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.about_no_update
 import com.drdisagree.teledrive.resources.files_removed_local_copies
@@ -35,8 +37,10 @@ import com.drdisagree.teledrive.resources.message_rebuild_done
 import com.drdisagree.teledrive.resources.message_thumbnails_cleared
 import com.drdisagree.teledrive.resources.message_wrong_passphrase
 import com.drdisagree.teledrive.resources.rebuild_locked_files
+import com.drdisagree.teledrive.resources.settings_debug_log_empty
 import com.drdisagree.teledrive.resources.settings_free_up_none
 import com.drdisagree.teledrive.resources.settings_nothing_to_remove
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -70,7 +74,8 @@ class SettingsViewModel(
     private val maintenanceScheduler: MaintenanceScheduler,
     private val transferScheduler: TransferScheduler,
     val permissionChecker: PermissionChecker,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    private val debugLogRecorder: DebugLogRecorder
 ) : ViewModel() {
 
     private val user = MutableStateFlow<TelegramUser?>(null)
@@ -80,6 +85,9 @@ class SettingsViewModel(
 
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 8)
     val messages = _messages.asSharedFlow()
+
+    private val _shareRequests = MutableSharedFlow<ShareRequest>(extraBufferCapacity = 1)
+    val shareRequests = _shareRequests.asSharedFlow()
 
     private val _keyBackupWorking = MutableStateFlow(false)
     val keyBackupWorking: StateFlow<Boolean> = _keyBackupWorking.asStateFlow()
@@ -332,6 +340,17 @@ class SettingsViewModel(
 
     fun dismissUpdate() {
         _updateState.value = UpdateState.Idle
+    }
+
+    fun shareDebugLog() {
+        viewModelScope.launch {
+            val log = withContext(Dispatchers.IO) { debugLogRecorder.export() }
+            if (log == null) {
+                _messages.tryEmit(UiText.Resource(Res.string.settings_debug_log_empty))
+            } else {
+                _shareRequests.tryEmit(ShareRequest(listOf(log.absolutePath), "text/plain"))
+            }
+        }
     }
 
     fun resync() {

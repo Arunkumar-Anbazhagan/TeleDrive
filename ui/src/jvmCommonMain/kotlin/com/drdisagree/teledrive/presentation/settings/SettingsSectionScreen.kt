@@ -135,6 +135,8 @@ import com.drdisagree.teledrive.resources.settings_restores_file_list
 import com.drdisagree.teledrive.resources.settings_retry_attempts
 import com.drdisagree.teledrive.resources.settings_set
 import com.drdisagree.teledrive.resources.settings_set_passphrase
+import com.drdisagree.teledrive.resources.settings_share_debug_log
+import com.drdisagree.teledrive.resources.settings_share_debug_log_subtitle
 import com.drdisagree.teledrive.resources.settings_shown_channels_private_owned
 import com.drdisagree.teledrive.resources.settings_shows_archived_collection_home
 import com.drdisagree.teledrive.resources.settings_shows_hidden_collection_home
@@ -175,6 +177,7 @@ import com.drdisagree.teledrive.resources.settings_free_up_subtitle
 import com.drdisagree.teledrive.presentation.platform.LocalDeleteConsentLauncher
 import com.drdisagree.teledrive.presentation.platform.LocalStandardFolders
 import com.drdisagree.teledrive.presentation.platform.LocalDeviceOwnerGate
+import com.drdisagree.teledrive.presentation.platform.LocalFileSharer
 import com.drdisagree.teledrive.presentation.platform.LocalFolderPicker
 import com.drdisagree.teledrive.presentation.platform.LocalPlatformCapabilities
 import com.drdisagree.teledrive.presentation.platform.PickResult
@@ -206,6 +209,13 @@ fun SettingsSectionScreen(
     val deleteConsentLauncher = LocalDeleteConsentLauncher.current
 
     CollectSnackbarMessages(viewModel.messages, snackbarHostState)
+    val fileSharer = LocalFileSharer.current
+    val logChooserTitle = stringResource(Res.string.settings_share_debug_log)
+    LaunchedEffect(Unit) {
+        viewModel.shareRequests.collect { request ->
+            fileSharer.share(request.paths, request.mimeType, logChooserTitle)
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.deleteConsentRequests.collect { request ->
             deleteConsentLauncher.launch(request) { granted ->
@@ -1180,6 +1190,15 @@ private fun AdvancedSection(
                 checked = prefs.debugLogging,
                 onChange = { value -> viewModel.update { it.copy(debugLogging = value) } }
             )
+        }
+        if (prefs.debugLogging) {
+            add {
+                SettingsClickRow(
+                    title = stringResource(Res.string.settings_share_debug_log),
+                    subtitle = stringResource(Res.string.settings_share_debug_log_subtitle),
+                    onClick = viewModel::shareDebugLog
+                )
+            }
         }
     }
 }

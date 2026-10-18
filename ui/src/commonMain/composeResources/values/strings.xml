@@ -715,6 +715,9 @@
 
     <!-- Settings: advanced -->
     <string name="settings_debug_logging">Debug logging</string>
+    <string name="settings_share_debug_log">Share log</string>
+    <string name="settings_share_debug_log_subtitle">Send the debug log to attach to a bug report</string>
+    <string name="settings_debug_log_empty">Nothing logged yet. Reproduce the problem, then share the log.</string>
     <string name="settings_link_previews">Link previews</string>
     <string name="settings_link_previews_subtitle">Telegram fetches the title and image for saved links</string>
     <string name="settings_parallel_transfers">Parallel transfers</string>

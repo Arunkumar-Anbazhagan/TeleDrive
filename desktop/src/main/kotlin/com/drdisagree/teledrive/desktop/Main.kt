@@ -34,6 +34,7 @@ import com.drdisagree.teledrive.desktop.ui.LocalFullscreenController
 import com.drdisagree.teledrive.desktop.ui.ProvideDesktopPlatformActions
 import com.drdisagree.teledrive.desktop.window.WindowsTitleBar
 import com.drdisagree.teledrive.domain.model.AppTheme
+import com.drdisagree.teledrive.core.logging.DebugLogController
 import com.drdisagree.teledrive.data.repository.FolderOwnershipRepair
 import com.drdisagree.teledrive.domain.repository.FileRepository
 import com.drdisagree.teledrive.domain.repository.SettingsRepository
@@ -73,7 +74,9 @@ fun main() {
         )
         exitProcess(0)
     }
-    CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+    val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    getKoin().get<DebugLogController>().start(backgroundScope, alwaysVerbose = true)
+    backgroundScope.launch {
         runCatching { getKoin().get<TransferRepository>().recoverOrphanedTransfers() }
         runCatching { getKoin().get<FileRepository>().sweepImportOrphans() }
         runCatching { getKoin().get<FolderOwnershipRepair>().refileStrayFiles() }

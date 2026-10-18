@@ -21,6 +21,7 @@ import com.drdisagree.teledrive.core.files.FileImporter
 import com.drdisagree.teledrive.core.files.LocalCopyDeleter
 import com.drdisagree.teledrive.core.files.PendingShare
 import com.drdisagree.teledrive.core.files.sharedFilesModule
+import com.drdisagree.teledrive.core.logging.debugLogModule
 import com.drdisagree.teledrive.core.media.MediaMetadataExtractor
 import com.drdisagree.teledrive.core.media.ThumbnailMemoryCache
 import com.drdisagree.teledrive.core.media.ThumbnailStore
@@ -102,6 +103,7 @@ val desktopModule = module {
         repositoryModule,
         useCaseModule,
         sharedFilesModule,
+        debugLogModule,
         transferEngineModule,
         sharedUiModule
     )

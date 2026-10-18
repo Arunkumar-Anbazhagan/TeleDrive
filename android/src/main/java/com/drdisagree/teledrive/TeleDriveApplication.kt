@@ -6,6 +6,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.drdisagree.teledrive.core.common.AppNotifications
 import com.drdisagree.teledrive.core.common.SafeLog
+import com.drdisagree.teledrive.core.logging.DebugLogController
 import com.drdisagree.teledrive.core.proxy.ProxyFailover
 import com.drdisagree.teledrive.core.publish.PublishScheduler
 import com.drdisagree.teledrive.core.transfer.MaintenanceScheduler
@@ -19,11 +20,7 @@ import com.drdisagree.teledrive.domain.repository.TrashRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -54,6 +51,8 @@ class TeleDriveApplication : Application(), SingletonImageLoader.Factory {
 
     private val proxyFailover: ProxyFailover by inject()
 
+    private val debugLogController: DebugLogController by inject()
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader
@@ -69,12 +68,8 @@ class TeleDriveApplication : Application(), SingletonImageLoader.Factory {
         appNotifications.createChannels()
         mediaStoreWatcher.start()
         proxyFailover.start(applicationScope)
+        debugLogController.start(applicationScope, alwaysVerbose = BuildConfig.DEBUG)
         applicationScope.launch {
-            settingsRepository.preferences
-                .map { it.debugLogging }
-                .distinctUntilChanged()
-                .onEach { SafeLog.verbose = it || BuildConfig.DEBUG }
-                .launchIn(applicationScope)
             transferRepository.recoverOrphanedTransfers()
             fileRepository.sweepImportOrphans()
             folderOwnershipRepair.runOnce()
