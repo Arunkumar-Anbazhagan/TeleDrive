@@ -35,11 +35,13 @@ class TransferQueueDrainer(
     private val backupResumeScheduler: BackupResumeScheduler
 ) {
 
+    private val claimLock = Mutex()
+    private val executing = mutableSetOf<String>()
+
     suspend fun drain(
         isStopped: () -> Boolean,
         onTerminalFailure: suspend (TransferEntity) -> Unit
     ): TransferDrainResult {
-        val claimLock = Mutex()
         var interrupted = false
         var backupsHeld = false
 
@@ -64,14 +66,20 @@ class TransferQueueDrainer(
                             return@launch
                         }
                         val hold = BackupGate.hold(prefs, status, powerMonitor.isCharging())
-                        val next = claimLock.withLock { claimNextQueued(includeBackups = hold == null) }
+                        val next = claimNextQueued(includeBackups = hold == null)
                         if (next == null) {
                             if (hold != null && transferDao.hasQueued(TransferType.BACKUP)) {
                                 backupsHeld = true
                             }
                             return@launch
                         }
-                        runTransfer(next, prefs.transferRetryCount, onTerminalFailure)
+                        try {
+                            runTransfer(next, prefs.transferRetryCount, onTerminalFailure)
+                        } finally {
+                            withContext(NonCancellable) {
+                                claimLock.withLock { executing.remove(next) }
+                            }
+                        }
                     }
                 }
             }.joinAll()
@@ -116,18 +124,27 @@ class TransferQueueDrainer(
         return nextClaimable(includeBackups = hold == null) != null
     }
 
-    /** Marked running before the lock is released, so every slot picks a different row. */
-    private suspend fun nextClaimable(includeBackups: Boolean): TransferEntity? =
-        if (includeBackups) {
-            transferDao.nextQueued(1).firstOrNull()
+    private suspend fun nextClaimable(
+        includeBackups: Boolean,
+        skip: Set<String> = emptySet()
+    ): TransferEntity? {
+        val candidates = if (includeBackups) {
+            transferDao.nextQueued(skip.size + 1)
         } else {
-            transferDao.nextQueuedExcept(TransferType.BACKUP, 1).firstOrNull()
+            transferDao.nextQueuedExcept(TransferType.BACKUP, skip.size + 1)
         }
+        return candidates.firstOrNull { it.id !in skip }
+    }
 
-    private suspend fun claimNextQueued(includeBackups: Boolean): String? {
-        val next = nextClaimable(includeBackups) ?: return null
+    /**
+     * A row put back in the queue while a slot still runs it stays with that slot, so the same
+     * file is never transferred twice at once.
+     */
+    private suspend fun claimNextQueued(includeBackups: Boolean): String? = claimLock.withLock {
+        val next = nextClaimable(includeBackups, executing) ?: return@withLock null
         transferDao.setState(next.id, TransferState.RUNNING, System.currentTimeMillis())
-        return next.id
+        executing += next.id
+        next.id
     }
 
     private suspend fun runTransfer(

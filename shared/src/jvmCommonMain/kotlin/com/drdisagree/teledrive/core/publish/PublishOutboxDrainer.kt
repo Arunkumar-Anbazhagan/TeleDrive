@@ -7,7 +7,11 @@ import com.drdisagree.teledrive.core.telegram.TelegramClient
 import com.drdisagree.teledrive.core.telegram.TelegramException
 import com.drdisagree.teledrive.data.local.dao.FileDao
 import com.drdisagree.teledrive.data.local.dao.FolderDao
+import com.drdisagree.teledrive.data.local.dao.FolderTombstoneDao
 import com.drdisagree.teledrive.data.local.dao.PendingDeleteDao
+import com.drdisagree.teledrive.data.local.database.TeleDriveDatabase
+import com.drdisagree.teledrive.data.local.database.inImmediateTransaction
+import com.drdisagree.teledrive.data.local.entity.FileEntity
 import com.drdisagree.teledrive.data.repository.FileManifestPublisher
 import com.drdisagree.teledrive.data.repository.FolderStateSynchronizer
 import kotlin.time.Duration.Companion.milliseconds
@@ -23,7 +27,9 @@ class PublishOutboxDrainer(
     private val pendingDeleteDao: PendingDeleteDao,
     private val telegramClient: TelegramClient,
     private val manifestPublisher: FileManifestPublisher,
-    private val folderStateSynchronizer: FolderStateSynchronizer
+    private val folderStateSynchronizer: FolderStateSynchronizer,
+    private val tombstoneDao: FolderTombstoneDao,
+    private val database: TeleDriveDatabase
 ) {
 
     suspend fun drain(isStopped: () -> Boolean): Boolean {
@@ -39,7 +45,7 @@ class PublishOutboxDrainer(
                 val entity = batch[index++]
                 if (isStopped()) return false
                 when (val result = manifestPublisher.publish(entity)) {
-                    is AppResult.Success -> fileDao.clearPendingPublish(entity.id)
+                    is AppResult.Success -> clearIfUnchanged(entity)
                     is AppResult.Failure -> {
                         val error = result.error
                         if (error is AppError.RateLimited) {
@@ -50,21 +56,40 @@ class PublishOutboxDrainer(
                         }
                         if (!isPermanent(error)) return false
                         SafeLog.w(TAG, "Dropping unpublishable manifest: $error")
-                        fileDao.clearPendingPublish(entity.id)
+                        clearIfUnchanged(entity)
                     }
                 }
             }
         }
 
-        if (folderDao.pendingPublishCount() > 0) {
+        repeat(MAX_FOLDER_PUSHES) {
+            if (folderDao.pendingPublishCount() == 0) return true
+            val before = folderSnapshot()
             val pushed = runCatching { folderStateSynchronizer.push() }
                 .onFailure { SafeLog.w(TAG, "Folder state push failed", it) }
                 .isSuccess
             if (!pushed) return false
-            folderDao.clearPendingPublish()
+            database.inImmediateTransaction {
+                if (folderSnapshot() == before) folderDao.clearPendingPublish()
+            }
         }
-        return true
+        return folderDao.pendingPublishCount() == 0
     }
+
+    /** An edit made while its caption was being written keeps the row pending for another pass. */
+    private suspend fun clearIfUnchanged(published: FileEntity) {
+        database.inImmediateTransaction {
+            val current = fileDao.byId(published.id) ?: return@inImmediateTransaction
+            if (current.copy(pendingPublish = published.pendingPublish) == published) {
+                fileDao.clearPendingPublish(published.id)
+            }
+        }
+    }
+
+    private suspend fun folderSnapshot() = Pair(
+        folderDao.allFoldersAnyOwner().map { it.copy(pendingPublish = false) }.sortedBy { it.id },
+        tombstoneDao.all().sortedBy { it.id }
+    )
 
     /**
      * Deleting a message that is already gone is accepted, so replaying after a crash costs
@@ -101,6 +126,7 @@ class PublishOutboxDrainer(
         const val TAG = "PublishOutbox"
         const val BATCH_SIZE = 100
         const val INLINE_WAIT_LIMIT = 60
+        const val MAX_FOLDER_PUSHES = 3
         val PERMANENT_CODES = 400..499
     }
 }

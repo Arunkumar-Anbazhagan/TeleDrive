@@ -129,7 +129,10 @@ internal class FakeTelegram : TelegramClient by unused() {
         return flowOf(TelegramDownloadEvent.Completed(file.absolutePath, file.length()))
     }
 
+    var onEditCaption: suspend (messageId: Long) -> Unit = {}
+
     override suspend fun editCaption(chatId: Long, messageId: Long, caption: String) {
+        onEditCaption(messageId)
         editedCaptions[messageId] = caption
     }
 

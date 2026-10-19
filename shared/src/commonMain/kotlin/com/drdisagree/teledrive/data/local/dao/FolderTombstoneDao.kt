@@ -12,6 +12,9 @@ interface FolderTombstoneDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(tombstones: List<FolderTombstoneEntity>)
 
+    @Query("SELECT * FROM folder_tombstones")
+    suspend fun all(): List<FolderTombstoneEntity>
+
     @Query("SELECT * FROM folder_tombstones WHERE chatId IS :chatId")
     suspend fun inChat(chatId: Long?): List<FolderTombstoneEntity>
 

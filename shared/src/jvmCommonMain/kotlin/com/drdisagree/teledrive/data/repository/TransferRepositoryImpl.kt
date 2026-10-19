@@ -25,6 +25,8 @@ import com.drdisagree.teledrive.domain.usecase.ValidateUploadUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
 
@@ -38,6 +40,8 @@ class TransferRepositoryImpl(
     private val storageInspector: StorageInspector,
     private val backupSessionTracker: BackupSessionTracker
 ) : TransferRepository {
+
+    private val enqueueLock = Mutex()
 
     override fun observeSection(
         section: TransferSection,
@@ -101,9 +105,6 @@ class TransferRepositoryImpl(
 
     override suspend fun enqueueDownload(fileId: String, priority: Int): AppResult<String> {
         val entity = fileDao.byId(fileId) ?: return AppResult.Failure(AppError.NotFound)
-        transferDao.unfinishedIdsForFiles(listOf(fileId)).firstOrNull()
-            ?.let { return AppResult.Success(it) }
-
         if (entity.remoteFileId == null) {
             return AppResult.Failure(AppError.NoRemoteCopy)
         }
@@ -113,15 +114,19 @@ class TransferRepositoryImpl(
                 AppError.InsufficientStorage(entity.sizeBytes + STORAGE_MARGIN, available)
             )
         }
-        return insertTransfer(
-            entity.id,
-            entity.name,
-            entity.sizeBytes,
-            entity.chatId,
-            TransferType.DOWNLOAD,
-            priority,
-            null
-        )
+        return enqueueLock.withLock {
+            transferDao.unfinishedIdsForFiles(listOf(fileId)).firstOrNull()
+                ?.let { return@withLock AppResult.Success(it) }
+            insertTransfer(
+                entity.id,
+                entity.name,
+                entity.sizeBytes,
+                entity.chatId,
+                TransferType.DOWNLOAD,
+                priority,
+                null
+            )
+        }
     }
 
     suspend fun enqueueBackup(
@@ -149,7 +154,7 @@ class TransferRepositoryImpl(
         val availableBytes = storageInspector.availableBytes()
         var queued = 0
 
-        for (chunk in fileIds.chunked(SQL_BATCH)) {
+        for (chunk in fileIds.chunked(SQL_BATCH)) enqueueLock.withLock {
             val alreadyQueued = transferDao.unfinishedFileIds(chunk).toSet()
             if (sessionId != null && alreadyQueued.isNotEmpty()) {
                 transferDao.adoptIntoSession(alreadyQueued.toList(), sessionId)
@@ -229,16 +234,20 @@ class TransferRepositoryImpl(
             splitsIfTooLarge = true
         )?.let { return AppResult.Failure(it) }
 
-        fileDao.setBackupStateIfLocalOnly(entity.id, BackupState.QUEUED)
-        return insertTransfer(
-            entity.id,
-            entity.name,
-            entity.sizeBytes,
-            entity.chatId,
-            type,
-            priority,
-            sessionId
-        )
+        return enqueueLock.withLock {
+            transferDao.unfinishedIdsForFiles(listOf(fileId)).firstOrNull()
+                ?.let { return@withLock AppResult.Success(it) }
+            fileDao.setBackupStateIfLocalOnly(entity.id, BackupState.QUEUED)
+            insertTransfer(
+                entity.id,
+                entity.name,
+                entity.sizeBytes,
+                entity.chatId,
+                type,
+                priority,
+                sessionId
+            )
+        }
     }
 
     private suspend fun insertTransfer(
