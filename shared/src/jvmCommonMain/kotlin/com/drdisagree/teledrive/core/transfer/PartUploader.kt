@@ -43,7 +43,8 @@ class PartUploader(
         source: File,
         chatId: Long,
         manifest: RemoteFileManifest,
-        encrypt: Boolean
+        encrypt: Boolean,
+        thumbnailPath: String? = null
     ): Flow<PartUploadEvent> = flow {
         val totalSize = source.length()
         val partCount = FileParts.countFor(totalSize)
@@ -97,7 +98,7 @@ class PartUploader(
                     fileName = partName,
                     mimeType = if (encrypt) OCTET_STREAM else entity.mimeType,
                     caption = manifestCodec.encode(partManifest, encrypt),
-                    thumbnailPath = null
+                    thumbnailPath = if (index == 0) thumbnailPath else null
                 ).collect { event ->
                     when (event) {
                         is TelegramUploadEvent.Started -> Unit

@@ -171,7 +171,8 @@ class TransferExecutor(
                 manifest = manifest,
                 encrypt = encrypt,
                 contentHash = contentHash,
-                supersededMessageId = supersededMessageId
+                supersededMessageId = supersededMessageId,
+                previewPath = previewPath
             )
         }
 
@@ -297,14 +298,15 @@ class TransferExecutor(
         manifest: RemoteFileManifest,
         encrypt: Boolean,
         contentHash: String?,
-        supersededMessageId: Long?
+        supersededMessageId: Long?,
+        previewPath: String?
     ): TransferOutcome {
         val ticker = ProgressTicker().apply { start(0, System.currentTimeMillis()) }
         var outcome: TransferOutcome =
             TransferOutcome.Failed(messages.uploadEnded)
 
         return try {
-            partUploader.upload(entity, sourceFile, chatId, manifest, encrypt)
+            partUploader.upload(entity, sourceFile, chatId, manifest, encrypt, previewPath)
                 .collect { event ->
                     currentCoroutineContext().ensureActive()
                     when (event) {
