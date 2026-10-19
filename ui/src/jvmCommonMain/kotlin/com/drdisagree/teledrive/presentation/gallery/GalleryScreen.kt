@@ -1,6 +1,7 @@
 package com.drdisagree.teledrive.presentation.gallery
 
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
@@ -20,6 +21,7 @@ import com.drdisagree.teledrive.resources.common_remove_from_offline
 import com.drdisagree.teledrive.resources.common_storage_actions
 import com.drdisagree.teledrive.resources.files_archive
 import com.drdisagree.teledrive.resources.files_hide
+import com.drdisagree.teledrive.resources.files_sort
 import com.drdisagree.teledrive.resources.preview_remove_favorites
 import androidx.compose.material3.SnackbarHostState
 import com.drdisagree.teledrive.presentation.common.CollectSnackbarMessages
@@ -125,6 +127,7 @@ import com.drdisagree.teledrive.presentation.components.FileGridItem
 import com.drdisagree.teledrive.presentation.components.FileListItem
 import com.drdisagree.teledrive.presentation.components.LoadingState
 import com.drdisagree.teledrive.presentation.components.RenameDialog
+import com.drdisagree.teledrive.presentation.components.SortMenu
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
 import com.drdisagree.teledrive.presentation.components.pinchZoom
 import com.drdisagree.teledrive.presentation.components.rememberDragSelect
@@ -482,6 +485,25 @@ fun GalleryScreen(
                         }
                     },
                     actions = {
+                        if (state.isAlbumView || state.tab != GalleryTab.ALBUMS) {
+                            var showSortMenu by remember { mutableStateOf(false) }
+                            IconButton(onClick = { showSortMenu = true }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = stringResource(Res.string.files_sort)
+                                )
+                            }
+                            SortMenu(
+                                expanded = showSortMenu,
+                                current = state.sortField,
+                                direction = state.sortDirection,
+                                onDismiss = { showSortMenu = false },
+                                onSelect = { field, direction ->
+                                    showSortMenu = false
+                                    viewModel.setSort(field, direction)
+                                }
+                            )
+                        }
                         RefreshAction(refreshing = refreshing, onRefresh = viewModel::refresh)
                     }
                 )

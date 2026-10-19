@@ -42,6 +42,8 @@ data class UserPreferences(
 
     val sortField: FileSortField = FileSortField.NAME,
     val sortDirection: SortDirection = SortDirection.ASCENDING,
+    val gallerySortField: FileSortField = FileSortField.DATE_MODIFIED,
+    val gallerySortDirection: SortDirection = SortDirection.DESCENDING,
 
     val backgroundPlayback: Boolean = false,
     val streamBeforeDownload: Boolean = true,

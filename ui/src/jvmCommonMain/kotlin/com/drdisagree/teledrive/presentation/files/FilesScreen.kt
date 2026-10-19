@@ -33,8 +33,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -122,6 +120,7 @@ import com.drdisagree.teledrive.presentation.components.BottomBarSnackbarHost
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
 import com.drdisagree.teledrive.presentation.components.FileGridItem
+import com.drdisagree.teledrive.presentation.components.SortMenu
 import com.drdisagree.teledrive.presentation.components.FileInfoSheet
 import com.drdisagree.teledrive.presentation.components.FileListItem
 import com.drdisagree.teledrive.presentation.components.FolderGridItem
@@ -193,14 +192,6 @@ import com.drdisagree.teledrive.resources.files_share_destination_confirm
 import com.drdisagree.teledrive.resources.files_share_destination_title
 import com.drdisagree.teledrive.resources.files_show_in_file_manager
 import com.drdisagree.teledrive.resources.files_sort
-import com.drdisagree.teledrive.resources.files_sort_ascending
-import com.drdisagree.teledrive.resources.files_sort_backup_status
-import com.drdisagree.teledrive.resources.files_sort_date_added
-import com.drdisagree.teledrive.resources.files_sort_date_modified
-import com.drdisagree.teledrive.resources.files_sort_descending
-import com.drdisagree.teledrive.resources.files_sort_name
-import com.drdisagree.teledrive.resources.files_sort_size
-import com.drdisagree.teledrive.resources.files_sort_type
 import com.drdisagree.teledrive.resources.info_details
 import com.drdisagree.teledrive.resources.note_edit_action
 import com.drdisagree.teledrive.resources.note_new
@@ -1065,66 +1056,6 @@ private fun FilesContent(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SortMenu(
-    expanded: Boolean,
-    current: FileSortField,
-    direction: SortDirection,
-    onDismiss: () -> Unit,
-    onSelect: (FileSortField, SortDirection) -> Unit
-) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        FileSortField.entries.forEach { field ->
-            val selected = field == current
-            val ascending = direction == SortDirection.ASCENDING
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(
-                            when (field) {
-                                FileSortField.NAME -> Res.string.files_sort_name
-                                FileSortField.SIZE -> Res.string.files_sort_size
-                                FileSortField.DATE_MODIFIED -> Res.string.files_sort_date_modified
-                                FileSortField.DATE_ADDED -> Res.string.files_sort_date_added
-                                FileSortField.TYPE -> Res.string.files_sort_type
-                                FileSortField.BACKUP_STATUS -> Res.string.files_sort_backup_status
-                            }
-                        )
-                    )
-                },
-                trailingIcon = if (selected) {
-                    {
-                        Icon(
-                            imageVector = if (ascending) {
-                                Icons.Filled.ArrowUpward
-                            } else {
-                                Icons.Filled.ArrowDownward
-                            },
-                            contentDescription = stringResource(
-                                if (ascending) {
-                                    Res.string.files_sort_ascending
-                                } else {
-                                    Res.string.files_sort_descending
-                                }
-                            ),
-                            modifier = Modifier.size(SORT_ICON_SIZE)
-                        )
-                    }
-                } else null,
-                onClick = {
-                    val newDirection = if (selected && ascending) {
-                        SortDirection.DESCENDING
-                    } else {
-                        SortDirection.ASCENDING
-                    }
-                    onSelect(field, newDirection)
-                }
-            )
-        }
-    }
-}
-
 @Composable
 internal fun FolderPickerHost(
     title: String,
@@ -1184,7 +1115,6 @@ private const val ROOT_KEY = "__root__"
 
 private const val FAB_SCROLL_THRESHOLD = 6f
 
-private val SORT_ICON_SIZE = 18.dp
 
 /** Draws over the item, since both item shapes paint their own background. */
 @Composable

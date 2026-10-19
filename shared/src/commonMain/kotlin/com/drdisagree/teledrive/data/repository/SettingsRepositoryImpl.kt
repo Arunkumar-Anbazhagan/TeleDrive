@@ -139,6 +139,14 @@ class SettingsRepositoryImpl(
                 this[PreferenceKeys.SORT_DIRECTION],
                 defaults.sortDirection
             ),
+            gallerySortField = enumOrDefault(
+                this[PreferenceKeys.GALLERY_SORT_FIELD],
+                defaults.gallerySortField
+            ),
+            gallerySortDirection = enumOrDefault(
+                this[PreferenceKeys.GALLERY_SORT_DIRECTION],
+                defaults.gallerySortDirection
+            ),
             backgroundPlayback = this[PreferenceKeys.BACKGROUND_PLAYBACK]
                 ?: defaults.backgroundPlayback,
             streamBeforeDownload = this[PreferenceKeys.STREAM_BEFORE_DOWNLOAD]
@@ -206,6 +214,8 @@ class SettingsRepositoryImpl(
         this[PreferenceKeys.TEXT_PREVIEW_SCALE] = prefs.textPreviewScale
         this[PreferenceKeys.SORT_FIELD] = prefs.sortField.name
         this[PreferenceKeys.SORT_DIRECTION] = prefs.sortDirection.name
+        this[PreferenceKeys.GALLERY_SORT_FIELD] = prefs.gallerySortField.name
+        this[PreferenceKeys.GALLERY_SORT_DIRECTION] = prefs.gallerySortDirection.name
         this[PreferenceKeys.BACKGROUND_PLAYBACK] = prefs.backgroundPlayback
         this[PreferenceKeys.STREAM_BEFORE_DOWNLOAD] = prefs.streamBeforeDownload
         this[PreferenceKeys.PREFERRED_AUDIO_LANGUAGE] = prefs.preferredAudioLanguage

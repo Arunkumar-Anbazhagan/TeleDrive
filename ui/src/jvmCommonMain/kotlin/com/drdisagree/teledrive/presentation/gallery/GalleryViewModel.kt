@@ -88,7 +88,9 @@ class GalleryViewModel(
     private val isAlbumView: Boolean = route != null
 
     private val tab = MutableStateFlow(GalleryTab.ALL)
-    private val sort = MutableStateFlow(FileSortField.DATE_MODIFIED to SortDirection.DESCENDING)
+    private val sort = settingsRepository.preferences
+        .map { it.gallerySortField to it.gallerySortDirection }
+        .distinctUntilChanged()
 
     val listPosition = ListPosition(savedStateHandle)
 
@@ -227,8 +229,13 @@ class GalleryViewModel(
         tab.update { value }
     }
 
-    fun setSort(field: FileSortField, direction: SortDirection) =
-        sort.update { field to direction }
+    fun setSort(field: FileSortField, direction: SortDirection) {
+        viewModelScope.launch {
+            settingsRepository.update {
+                it.copy(gallerySortField = field, gallerySortDirection = direction)
+            }
+        }
+    }
 
     fun zoomIn() = applyZoom(GridZoomLevel::zoomedIn)
 
