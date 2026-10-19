@@ -15,7 +15,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -92,6 +91,7 @@ import com.drdisagree.teledrive.presentation.navigation.navigateOnce
 import com.drdisagree.teledrive.presentation.platform.LocalAppVersion
 import com.drdisagree.teledrive.presentation.platform.LocalUrlOpener
 import com.drdisagree.teledrive.presentation.theme.TeleDriveTheme
+import com.drdisagree.teledrive.presentation.theme.systemDarkTheme
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -124,7 +124,7 @@ fun TeleDriveApp(
     val darkTheme = when (state.theme) {
         AppTheme.LIGHT -> false
         AppTheme.DARK -> true
-        AppTheme.SYSTEM -> isSystemInDarkTheme()
+        AppTheme.SYSTEM -> systemDarkTheme()
     }
 
     val pendingUpdate by viewModel.pendingUpdate.collectAsStateWithLifecycle()

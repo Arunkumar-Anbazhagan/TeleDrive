@@ -1,6 +1,5 @@
 package com.drdisagree.teledrive.desktop
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +40,7 @@ import com.drdisagree.teledrive.domain.repository.SettingsRepository
 import com.drdisagree.teledrive.domain.repository.TransferRepository
 import com.drdisagree.teledrive.domain.repository.TrashRepository
 import com.drdisagree.teledrive.presentation.TeleDriveApp
+import com.drdisagree.teledrive.presentation.theme.systemDarkTheme
 import com.drdisagree.teledrive.resources.Res as SharedRes
 import com.drdisagree.teledrive.resources.app_name
 import java.awt.Dimension
@@ -120,7 +120,7 @@ fun main() {
             val theme by remember {
                 settingsRepository.preferences.map { it.theme }.distinctUntilChanged()
             }.collectAsState(initial = AppTheme.SYSTEM)
-            val systemDark = isSystemInDarkTheme()
+            val systemDark = systemDarkTheme()
             val darkTitleBar = when (theme) {
                 AppTheme.LIGHT -> false
                 AppTheme.DARK -> true

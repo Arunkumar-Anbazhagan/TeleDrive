@@ -8,3 +8,6 @@ internal expect fun platformColorScheme(darkTheme: Boolean, dynamicColor: Boolea
 
 @Composable
 internal expect fun PlatformThemeSideEffects(darkTheme: Boolean)
+
+@Composable
+expect fun systemDarkTheme(): Boolean
