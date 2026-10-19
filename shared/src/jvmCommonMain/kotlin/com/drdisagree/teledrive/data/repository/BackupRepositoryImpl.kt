@@ -38,6 +38,8 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class BackupRepositoryImpl(
@@ -57,13 +59,15 @@ class BackupRepositoryImpl(
     private val dispatchers: DispatcherProvider
 ) : BackupRepository {
 
+    private val scanLock = Mutex()
+
     override fun observeActiveSession(): Flow<BackupSession?> =
         backupDao.observeActiveSession().map { it?.toDomain() }
 
     override fun observeLastBackupAt(): Flow<Long?> = backupDao.observeLastBackupAt()
 
     override suspend fun startBackup(trigger: BackupTrigger): AppResult<String?> =
-        withContext(dispatchers.io) { runBackup(trigger) }
+        withContext(dispatchers.io) { scanLock.withLock { runBackup(trigger) } }
 
     private suspend fun runBackup(trigger: BackupTrigger): AppResult<String?> {
         if (backupDao.activeSession() != null) {
