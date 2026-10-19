@@ -171,7 +171,12 @@ class FolderStateSynchronizer(
                 modifiedAt = entry.modifiedAt,
                 changedAt = entry.clock
             )
-            if (existing == null) folderDao.upsert(row) else folderDao.update(row)
+            if (existing == null) {
+                folderDao.upsert(row)
+                SafeLog.d(TAG, "Folder state added folder ${entry.id}")
+            } else {
+                folderDao.update(row)
+            }
             changed++
         }
 
@@ -182,8 +187,12 @@ class FolderStateSynchronizer(
         val all = folderDao.allFolders(chatId)
         for (deletion in state.deleted) {
             val folder = all.firstOrNull { it.id == deletion.id } ?: continue
-            if (folder.changedAt > deletion.deletedAt) continue
-            if (hasNewerDescendant(folder.id, deletion.deletedAt, all)) continue
+            if (folder.changedAt > deletion.deletedAt ||
+                hasNewerDescendant(folder.id, deletion.deletedAt, all)
+            ) {
+                SafeLog.d(TAG, "Kept deleted folder ${folder.id}: it changed after the deletion")
+                continue
+            }
             folderDao.delete(folder.id)
             changed++
         }

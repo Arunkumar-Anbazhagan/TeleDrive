@@ -380,7 +380,8 @@ class SyncRepositoryImpl(
     private suspend fun resolveFolder(
         manifest: RemoteFileManifest,
         cache: MutableMap<String, String?>,
-        chatId: Long
+        chatId: Long,
+        messageId: Long
     ): String? {
         manifest.folderId?.let { id ->
             if (cache.containsValue(id)) return id
@@ -393,11 +394,18 @@ class SyncRepositoryImpl(
         val resolved = if (manifest.trashedAt != null) {
             folderPathResolver.resolveExisting(manifest.folderPath, chatId)
         } else {
-            folderPathResolver.resolveOrCreate(
-                manifest.folderPath,
-                manifest.folderId,
-                chatId = chatId
-            )
+            folderPathResolver.resolveExisting(manifest.folderPath, chatId)
+                ?: folderPathResolver.resolveOrCreate(
+                    manifest.folderPath,
+                    manifest.folderId,
+                    chatId = chatId
+                ).also { created ->
+                    SafeLog.d(
+                        TAG,
+                        "Message $messageId recreated its folder path as $created " +
+                                "(part ${manifest.partIndex} of ${manifest.partCount})"
+                    )
+                }
         }
         cache[manifest.folderPath] = resolved
         return resolved
@@ -436,7 +444,7 @@ class SyncRepositoryImpl(
             laterPart -> manifest.folderId?.takeIf {
                 folderPathResolver.exists(it, document.chatId)
             }
-            else -> resolveFolder(manifest, folderCache, document.chatId)
+            else -> resolveFolder(manifest, folderCache, document.chatId, document.messageId)
         }
         val folderTrashedAt = folderId?.let { folderDao.byId(it)?.trashedAt }
 
