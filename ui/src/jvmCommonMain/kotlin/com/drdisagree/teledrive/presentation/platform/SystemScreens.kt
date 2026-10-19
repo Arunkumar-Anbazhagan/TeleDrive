@@ -7,6 +7,8 @@ interface SystemScreens {
     fun openAppSettings()
 
     fun openAllFilesAccess()
+
+    fun openBatteryOptimization()
 }
 
 val LocalSystemScreens = staticCompositionLocalOf<SystemScreens> {

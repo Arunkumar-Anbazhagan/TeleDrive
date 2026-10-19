@@ -157,5 +157,6 @@ class AppNotifications(
         const val NOTIFICATION_ID_BACKUP = 1002
         const val NOTIFICATION_ID_FAILURE = 1003
         const val NOTIFICATION_ID_UPDATE = 1004
+        const val NOTIFICATION_ID_PUBLISH = 1005
     }
 }

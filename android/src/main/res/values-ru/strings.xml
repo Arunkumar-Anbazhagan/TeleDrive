@@ -42,9 +42,17 @@
     <string name="notification_channel_updates">Обновления приложения</string>
     <string name="notification_channel_updates_desc">Уведомляет о выходе новых версий</string>
     <string name="notification_download_failed">Ошибка скачивания</string>
+    <string name="notification_downloading_many">Скачивание файлов: %1$d из %2$d</string>
+    <string name="notification_downloading_one">Скачивание файла</string>
+    <string name="notification_publish_progress">Обновлено файлов: %1$d из %2$d</string>
+    <string name="notification_publish_title">Сохранение изменений в Telegram</string>
+    <string name="notification_transfer_and_more">%1$s и ещё %2$d</string>
+    <string name="notification_transferring_many">Передача файлов: %1$d из %2$d</string>
     <string name="notification_transfers_active">Выполняются передачи</string>
     <string name="notification_update_message">%1$s %2$s готова к скачиванию</string>
     <string name="notification_update_skip">Пропустить эту версию</string>
     <string name="notification_update_title">Доступно обновление</string>
     <string name="notification_upload_failed">Ошибка загрузки</string>
+    <string name="notification_uploading_many">Отправка файлов: %1$d из %2$d</string>
+    <string name="notification_uploading_one">Отправка файла</string>
 </resources>

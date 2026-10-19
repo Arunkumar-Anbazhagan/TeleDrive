@@ -30,7 +30,7 @@ class PublishDuringEditTest {
             files.rename("f1", "c.jpg", 6_000)
         }
 
-        drainer().drain { false }
+        drainer().drain(isStopped = { false })
 
         assertFalse(files.byId("f1")!!.pendingPublish)
         assertEquals("c.jpg", harness.codec.decode(telegram.editedCaptions.getValue(20L))!!.name)
@@ -50,7 +50,7 @@ class PublishDuringEditTest {
             folders.rename("trips", "Holidays", 9_000)
         }
 
-        drainer().drain { false }
+        drainer().drain(isStopped = { false })
 
         assertEquals(0, folders.pendingPublishCount())
         assertEquals(

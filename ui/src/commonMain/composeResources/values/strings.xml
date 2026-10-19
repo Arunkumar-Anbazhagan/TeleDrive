@@ -805,6 +805,8 @@
     <!-- Permissions -->
     <string name="permission_all_files_rationale">Needed to back up documents, downloads and SD card folders</string>
     <string name="permission_all_files_title">All files access</string>
+    <string name="permission_battery_rationale">Keeps uploads and syncing going after you close TeleDrive</string>
+    <string name="permission_battery_title">Unrestricted battery use</string>
     <string name="permission_missing_message">TeleDrive cannot read your %1$s without permission.</string>
     <string name="permission_not_allowed">Not allowed \u00b7 %1$s</string>
     <string name="permission_notifications_rationale">Shows transfer and backup progress</string>

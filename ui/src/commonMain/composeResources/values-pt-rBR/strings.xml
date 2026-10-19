@@ -802,6 +802,8 @@
     <!-- Permissions -->
     <string name="permission_all_files_rationale">Necessário para fazer backup de documentos, downloads e pastas do cartão SD</string>
     <string name="permission_all_files_title">Acesso a todos os arquivos</string>
+    <string name="permission_battery_rationale">Mantém envios e sincronização ativos depois que você fecha o TeleDrive</string>
+    <string name="permission_battery_title">Uso de bateria sem restrições</string>
     <string name="permission_missing_message">O TeleDrive não pode ler %1$s sem permissão.</string>
     <string name="permission_not_allowed">Não permitido \u00b7 %1$s</string>
     <string name="permission_notifications_rationale">Exibe o progresso de transferências e backups</string>

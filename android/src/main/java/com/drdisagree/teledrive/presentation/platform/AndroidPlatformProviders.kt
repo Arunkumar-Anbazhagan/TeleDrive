@@ -25,6 +25,7 @@ import com.drdisagree.teledrive.core.files.StandardBackupFolder
 import com.drdisagree.teledrive.core.permissions.manifestPermission
 import com.drdisagree.teledrive.core.permissions.openAllFilesAccess
 import com.drdisagree.teledrive.core.permissions.openAppSettings
+import com.drdisagree.teledrive.core.permissions.openBatteryOptimization
 import com.drdisagree.teledrive.domain.model.AppTheme
 import com.drdisagree.teledrive.domain.model.UserPreferences
 import com.drdisagree.teledrive.domain.repository.SettingsRepository
@@ -148,6 +149,7 @@ fun ProvidePlatformActions(content: @Composable () -> Unit) {
         object : SystemScreens {
             override fun openAppSettings() = openAppSettings(context)
             override fun openAllFilesAccess() = openAllFilesAccess(context)
+            override fun openBatteryOptimization() = openBatteryOptimization(context)
         }
     }
 

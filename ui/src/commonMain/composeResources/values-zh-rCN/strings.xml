@@ -791,6 +791,8 @@
     <!-- Permissions -->
     <string name="permission_all_files_rationale">备份文档、下载和 SD 卡文件夹所需</string>
     <string name="permission_all_files_title">所有文件访问权限</string>
+    <string name="permission_battery_rationale">关闭 TeleDrive 后仍可继续上传和同步</string>
+    <string name="permission_battery_title">不限制电池使用</string>
     <string name="permission_missing_message">未经授权，TeleDrive 无法读取你的%1$s。</string>
     <string name="permission_not_allowed">未授权 \u00b7 %1$s</string>
     <string name="permission_notifications_rationale">显示传输和备份进度</string>

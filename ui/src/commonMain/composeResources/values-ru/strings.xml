@@ -824,6 +824,8 @@
     <!-- Permissions -->
     <string name="permission_all_files_rationale">Требуется для бэкапа документов, загрузок и папок на SD-карте</string>
     <string name="permission_all_files_title">Доступ ко всем файлам</string>
+    <string name="permission_battery_rationale">Не даёт системе останавливать отправку и синхронизацию после закрытия TeleDrive</string>
+    <string name="permission_battery_title">Работа в фоне без ограничений</string>
     <string name="permission_missing_message">TeleDrive не может прочитать %1$s без разрешения.</string>
     <string name="permission_not_allowed">Запрещено \u00b7 %1$s</string>
     <string name="permission_notifications_rationale">Показывает прогресс передач и бэкапа</string>

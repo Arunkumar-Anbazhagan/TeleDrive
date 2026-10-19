@@ -42,9 +42,17 @@
     <string name="notification_channel_updates">应用更新</string>
     <string name="notification_channel_updates_desc">有新版本发布时通知你</string>
     <string name="notification_download_failed">下载失败</string>
+    <string name="notification_downloading_many">正在下载第 %1$d 个文件，共 %2$d 个</string>
+    <string name="notification_downloading_one">正在下载文件</string>
+    <string name="notification_publish_progress">已更新 %1$d 个文件，共 %2$d 个</string>
+    <string name="notification_publish_title">正在将更改保存到 Telegram</string>
+    <string name="notification_transfer_and_more">%1$s 及另外 %2$d 个</string>
+    <string name="notification_transferring_many">正在传输第 %1$d 个文件，共 %2$d 个</string>
     <string name="notification_transfers_active">传输进行中</string>
     <string name="notification_update_message">%1$s %2$s 可供下载</string>
     <string name="notification_update_skip">跳过此版本</string>
     <string name="notification_update_title">有新版本</string>
     <string name="notification_upload_failed">上传失败</string>
+    <string name="notification_uploading_many">正在上传第 %1$d 个文件，共 %2$d 个</string>
+    <string name="notification_uploading_one">正在上传文件</string>
 </resources>

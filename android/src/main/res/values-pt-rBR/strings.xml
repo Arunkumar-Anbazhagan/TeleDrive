@@ -42,9 +42,17 @@
     <string name="notification_channel_updates">Atualizações do aplicativo</string>
     <string name="notification_channel_updates_desc">Avisa quando uma nova versão estiver disponível</string>
     <string name="notification_download_failed">Falha no download</string>
+    <string name="notification_downloading_many">Baixando %1$d de %2$d arquivos</string>
+    <string name="notification_downloading_one">Baixando um arquivo</string>
+    <string name="notification_publish_progress">%1$d de %2$d arquivos atualizados</string>
+    <string name="notification_publish_title">Salvando alterações no Telegram</string>
+    <string name="notification_transfer_and_more">%1$s e mais %2$d</string>
+    <string name="notification_transferring_many">Transferindo %1$d de %2$d arquivos</string>
     <string name="notification_transfers_active">Transferências em andamento</string>
     <string name="notification_update_message">%1$s %2$s está pronto para download</string>
     <string name="notification_update_skip">Pular esta versão</string>
     <string name="notification_update_title">Atualização disponível</string>
     <string name="notification_upload_failed">Falha no envio</string>
+    <string name="notification_uploading_many">Enviando %1$d de %2$d arquivos</string>
+    <string name="notification_uploading_one">Enviando um arquivo</string>
 </resources>

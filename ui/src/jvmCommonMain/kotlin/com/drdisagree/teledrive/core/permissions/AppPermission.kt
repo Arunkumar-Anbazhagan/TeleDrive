@@ -3,6 +3,8 @@ package com.drdisagree.teledrive.core.permissions
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.permission_all_files_rationale
 import com.drdisagree.teledrive.resources.permission_all_files_title
+import com.drdisagree.teledrive.resources.permission_battery_rationale
+import com.drdisagree.teledrive.resources.permission_battery_title
 import com.drdisagree.teledrive.resources.permission_notifications_rationale
 import com.drdisagree.teledrive.resources.permission_notifications_title
 import com.drdisagree.teledrive.resources.permission_photos_rationale
@@ -36,7 +38,12 @@ enum class AppPermission(
         titleRes = Res.string.permission_all_files_title,
         rationaleRes = Res.string.permission_all_files_rationale,
         critical = true
+    ),
+    UNRESTRICTED_BATTERY(
+        titleRes = Res.string.permission_battery_title,
+        rationaleRes = Res.string.permission_battery_rationale,
+        critical = false
     );
 
-    val isSpecialAccess: Boolean get() = this == ALL_FILES
+    val isSpecialAccess: Boolean get() = this == ALL_FILES || this == UNRESTRICTED_BATTERY
 }

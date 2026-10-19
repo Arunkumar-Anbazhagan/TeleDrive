@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import androidx.core.content.ContextCompat
 
 class AndroidPermissionChecker(
@@ -12,6 +13,7 @@ class AndroidPermissionChecker(
 ) : PermissionChecker {
 
     override fun isGranted(permission: AppPermission): Boolean = when {
+        permission == AppPermission.UNRESTRICTED_BATTERY -> ignoresBatteryOptimizations()
         permission.isSpecialAccess -> hasAllFilesAccess()
         else -> permission.manifestPermission?.let {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -27,6 +29,10 @@ class AndroidPermissionChecker(
 
         else -> hasLegacyReadAccess()
     }
+
+    private fun ignoresBatteryOptimizations(): Boolean =
+        context.getSystemService(PowerManager::class.java)
+            ?.isIgnoringBatteryOptimizations(context.packageName) == true
 
     private fun hasLegacyReadAccess(): Boolean =
         ContextCompat.checkSelfPermission(

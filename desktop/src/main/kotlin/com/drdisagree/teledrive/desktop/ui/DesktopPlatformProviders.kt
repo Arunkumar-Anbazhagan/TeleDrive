@@ -115,6 +115,7 @@ fun ProvideDesktopPlatformActions(content: @Composable () -> Unit) {
         object : SystemScreens {
             override fun openAppSettings() = Unit
             override fun openAllFilesAccess() = Unit
+            override fun openBatteryOptimization() = Unit
         }
     }
     val deviceOwnerGate = remember {

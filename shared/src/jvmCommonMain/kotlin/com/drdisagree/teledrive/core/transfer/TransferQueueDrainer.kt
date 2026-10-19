@@ -136,10 +136,6 @@ class TransferQueueDrainer(
         return candidates.firstOrNull { it.id !in skip }
     }
 
-    /**
-     * A row put back in the queue while a slot still runs it stays with that slot, so the same
-     * file is never transferred twice at once.
-     */
     private suspend fun claimNextQueued(includeBackups: Boolean): String? = claimLock.withLock {
         val next = nextClaimable(includeBackups, executing) ?: return@withLock null
         transferDao.setState(next.id, TransferState.RUNNING, System.currentTimeMillis())

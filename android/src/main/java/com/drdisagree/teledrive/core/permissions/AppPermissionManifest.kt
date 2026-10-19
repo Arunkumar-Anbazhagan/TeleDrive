@@ -27,5 +27,6 @@ val AppPermission.manifestPermission: String?
                 null
             }
 
-        AppPermission.ALL_FILES -> null
+        AppPermission.ALL_FILES,
+        AppPermission.UNRESTRICTED_BATTERY -> null
     }

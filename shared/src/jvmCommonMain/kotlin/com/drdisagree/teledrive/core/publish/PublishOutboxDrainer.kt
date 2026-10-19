@@ -32,20 +32,29 @@ class PublishOutboxDrainer(
     private val database: TeleDriveDatabase
 ) {
 
-    suspend fun drain(isStopped: () -> Boolean): Boolean {
+    suspend fun drain(
+        isStopped: () -> Boolean,
+        onProgress: suspend (published: Int, total: Int) -> Unit = { _, _ -> }
+    ): Boolean {
         if (!replayDeletes(isStopped)) return false
 
+        var published = 0
         while (true) {
             if (isStopped()) return false
             val batch = fileDao.pendingPublish(BATCH_SIZE)
             if (batch.isEmpty()) break
+            val total = published + fileDao.pendingPublishCount()
+            onProgress(published, total)
 
             var index = 0
             while (index < batch.size) {
                 val entity = batch[index++]
                 if (isStopped()) return false
                 when (val result = manifestPublisher.publish(entity)) {
-                    is AppResult.Success -> clearIfUnchanged(entity)
+                    is AppResult.Success -> {
+                        clearIfUnchanged(entity)
+                        onProgress(++published, total)
+                    }
                     is AppResult.Failure -> {
                         val error = result.error
                         if (error is AppError.RateLimited) {
@@ -57,6 +66,7 @@ class PublishOutboxDrainer(
                         if (!isPermanent(error)) return false
                         SafeLog.w(TAG, "Dropping unpublishable manifest: $error")
                         clearIfUnchanged(entity)
+                        onProgress(++published, total)
                     }
                 }
             }
@@ -76,7 +86,6 @@ class PublishOutboxDrainer(
         return folderDao.pendingPublishCount() == 0
     }
 
-    /** An edit made while its caption was being written keeps the row pending for another pass. */
     private suspend fun clearIfUnchanged(published: FileEntity) {
         database.inImmediateTransaction {
             val current = fileDao.byId(published.id) ?: return@inImmediateTransaction

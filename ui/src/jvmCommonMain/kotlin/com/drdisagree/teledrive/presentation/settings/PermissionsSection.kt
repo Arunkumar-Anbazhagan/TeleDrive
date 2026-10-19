@@ -70,6 +70,9 @@ fun PermissionsSection(permissionChecker: PermissionChecker) {
                     onClick = {
                         when {
                             granted -> systemScreens.openAppSettings()
+                            permission == AppPermission.UNRESTRICTED_BATTERY ->
+                                systemScreens.openBatteryOptimization()
+
                             permission.isSpecialAccess -> systemScreens.openAllFilesAccess()
                             else -> permissionRequester.request(listOf(permission)) {
                                 statuses = permissionChecker.statuses()
