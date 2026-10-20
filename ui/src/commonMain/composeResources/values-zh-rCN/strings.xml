@@ -33,6 +33,9 @@
     <plurals name="rebuild_locked_files">
         <item quantity="other">跳过 %1$d 个加密文件。恢复密钥备份后即可为其建立索引。</item>
     </plurals>
+    <plurals name="home_saving_changes_left">
+        <item quantity="other">还剩 %1$d 个文件</item>
+    </plurals>
     <plurals name="home_back_up_pending">
         <item quantity="other">备份 %1$d 个文件</item>
     </plurals>
@@ -254,8 +257,11 @@
     <string name="home_nothing_new_to_back_up">没有新内容需要备份</string>
     <string name="home_open_drives">切换云端硬盘</string>
     <string name="home_queued_uploads_discarded_files">排队中的上传将被丢弃。已上传的文件仍留在 Telegram，你可以稍后重新开始备份。</string>
+    <string name="home_saving_changes">正在将更改保存到 Telegram</string>
+    <string name="home_saving_folder_changes">文件夹更改待保存</string>
     <string name="home_scan_now">立即扫描</string>
     <string name="home_scanning">正在扫描…</string>
+    <string name="home_sync_now">立即同步</string>
     <string name="home_section_favorites">收藏</string>
     <string name="home_section_recent">最近</string>
     <string name="home_section_storage">存储</string>

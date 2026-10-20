@@ -26,6 +26,9 @@ interface FolderDao {
     @Query("SELECT COUNT(*) FROM folders WHERE pendingPublish = 1")
     suspend fun pendingPublishCount(): Int
 
+    @Query("SELECT COUNT(*) FROM folders WHERE pendingPublish = 1")
+    fun observePendingPublishCount(): Flow<Int>
+
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: String): FolderEntity?
 

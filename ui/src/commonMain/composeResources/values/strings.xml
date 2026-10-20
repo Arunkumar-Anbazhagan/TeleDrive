@@ -41,6 +41,10 @@
         <item quantity="one">%1$d encrypted file skipped. Restore your key backup to index it.</item>
         <item quantity="other">%1$d encrypted files skipped. Restore your key backup to index them.</item>
     </plurals>
+    <plurals name="home_saving_changes_left">
+        <item quantity="one">%1$d file left</item>
+        <item quantity="other">%1$d files left</item>
+    </plurals>
     <plurals name="home_back_up_pending">
         <item quantity="one">Back up %1$d file</item>
         <item quantity="other">Back up %1$d files</item>
@@ -265,8 +269,11 @@
     <string name="home_nothing_new_to_back_up">Nothing new to back up</string>
     <string name="home_open_drives">Switch drive</string>
     <string name="home_queued_uploads_discarded_files">Queued uploads are discarded. Files already uploaded stay in Telegram, and you can start the backup again later.</string>
+    <string name="home_saving_changes">Saving changes to Telegram</string>
+    <string name="home_saving_folder_changes">Folder changes waiting</string>
     <string name="home_scan_now">Scan now</string>
     <string name="home_scanning">Scanning…</string>
+    <string name="home_sync_now">Sync now</string>
     <string name="home_section_favorites">Favorites</string>
     <string name="home_section_recent">Recent</string>
     <string name="home_section_storage">Storage</string>

@@ -34,7 +34,8 @@ class PublishOutboxDrainer(
 
     suspend fun drain(
         isStopped: () -> Boolean,
-        onProgress: suspend (published: Int, total: Int) -> Unit = { _, _ -> }
+        onProgress: suspend (published: Int, total: Int) -> Unit = { _, _ -> },
+        onWaiting: suspend (secondsLeft: Int) -> Unit = {}
     ): Boolean {
         if (!replayDeletes(isStopped)) return false
 
@@ -43,8 +44,7 @@ class PublishOutboxDrainer(
             if (isStopped()) return false
             val batch = fileDao.pendingPublish(BATCH_SIZE)
             if (batch.isEmpty()) break
-            val total = published + fileDao.pendingPublishCount()
-            onProgress(published, total)
+            onProgress(published, published + fileDao.pendingPublishCount())
 
             var index = 0
             while (index < batch.size) {
@@ -53,20 +53,22 @@ class PublishOutboxDrainer(
                 when (val result = manifestPublisher.publish(entity)) {
                     is AppResult.Success -> {
                         clearIfUnchanged(entity)
-                        onProgress(++published, total)
+                        onProgress(++published, published + fileDao.pendingPublishCount())
                     }
                     is AppResult.Failure -> {
                         val error = result.error
                         if (error is AppError.RateLimited) {
                             if (error.retryAfterSeconds > INLINE_WAIT_LIMIT) return false
-                            delay(((error.retryAfterSeconds + 1) * 1000L).milliseconds)
+                            if (!waitOut(error.retryAfterSeconds + 1, isStopped, onWaiting)) {
+                                return false
+                            }
                             index--
                             continue
                         }
                         if (!isPermanent(error)) return false
                         SafeLog.w(TAG, "Dropping unpublishable manifest: $error")
                         clearIfUnchanged(entity)
-                        onProgress(++published, total)
+                        onProgress(++published, published + fileDao.pendingPublishCount())
                     }
                 }
             }
@@ -84,6 +86,22 @@ class PublishOutboxDrainer(
             }
         }
         return folderDao.pendingPublishCount() == 0
+    }
+
+    private suspend fun waitOut(
+        seconds: Int,
+        isStopped: () -> Boolean,
+        onWaiting: suspend (Int) -> Unit
+    ): Boolean {
+        var left = seconds
+        while (left > 0) {
+            if (isStopped()) return false
+            onWaiting(left)
+            val step = minOf(left, WAIT_TICK_SECONDS)
+            delay((step * 1000L).milliseconds)
+            left -= step
+        }
+        return true
     }
 
     private suspend fun clearIfUnchanged(published: FileEntity) {
@@ -134,7 +152,8 @@ class PublishOutboxDrainer(
     private companion object {
         const val TAG = "PublishOutbox"
         const val BATCH_SIZE = 100
-        const val INLINE_WAIT_LIMIT = 60
+        const val INLINE_WAIT_LIMIT = 900
+        const val WAIT_TICK_SECONDS = 15
         const val MAX_FOLDER_PUSHES = 3
         val PERMANENT_CODES = 400..499
     }

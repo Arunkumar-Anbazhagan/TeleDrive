@@ -58,6 +58,9 @@ interface FileDao {
     @Query("SELECT COUNT(*) FROM files WHERE pendingPublish = 1")
     suspend fun pendingPublishCount(): Int
 
+    @Query("SELECT COUNT(*) FROM files WHERE pendingPublish = 1")
+    fun observePendingPublishCount(): Flow<Int>
+
     @Query("SELECT * FROM files WHERE pendingPublish = 1 LIMIT :limit")
     suspend fun pendingPublish(limit: Int): List<FileEntity>
 

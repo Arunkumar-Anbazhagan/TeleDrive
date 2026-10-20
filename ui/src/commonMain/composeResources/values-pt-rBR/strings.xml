@@ -41,6 +41,10 @@
         <item quantity="one">%1$d arquivo criptografado ignorado. Restaure o backup da chave para indexá-lo.</item>
         <item quantity="other">%1$d arquivos criptografados ignorados. Restaure o backup da chave para indexá-los.</item>
     </plurals>
+    <plurals name="home_saving_changes_left">
+        <item quantity="one">Falta %1$d arquivo</item>
+        <item quantity="other">Faltam %1$d arquivos</item>
+    </plurals>
     <plurals name="home_back_up_pending">
         <item quantity="one">Fazer backup de %1$d arquivo</item>
         <item quantity="other">Fazer backup de %1$d arquivos</item>
@@ -265,8 +269,11 @@
     <string name="home_nothing_new_to_back_up">Nada de novo para salvar em backup</string>
     <string name="home_open_drives">Alternar drive</string>
     <string name="home_queued_uploads_discarded_files">Os envios na fila serão descartados. Os arquivos já enviados permanecerão no Telegram, e você poderá reiniciar o backup mais tarde.</string>
+    <string name="home_saving_changes">Salvando alterações no Telegram</string>
+    <string name="home_saving_folder_changes">Alterações de pastas pendentes</string>
     <string name="home_scan_now">Verificar agora</string>
     <string name="home_scanning">Verificando…</string>
+    <string name="home_sync_now">Sincronizar agora</string>
     <string name="home_section_favorites">Favoritos</string>
     <string name="home_section_recent">Recentes</string>
     <string name="home_section_storage">Armazenamento</string>

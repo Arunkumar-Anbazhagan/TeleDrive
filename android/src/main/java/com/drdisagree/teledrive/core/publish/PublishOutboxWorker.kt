@@ -19,32 +19,54 @@ class PublishOutboxWorker(
 
     override suspend fun doWork(): Result {
         var channelsReady = false
-        val drained = drainer.drain(isStopped = { isStopped }) { published, total ->
-            if (total < FOREGROUND_MIN_FILES) return@drain
+        var lastPublished = 0
+        var lastTotal = 0
+        suspend fun show(info: ForegroundInfo) {
             if (!channelsReady) {
                 appNotifications.createChannels()
                 channelsReady = true
             }
-            runCatching { setForeground(foregroundInfo(published, total)) }
+            runCatching { setForeground(info) }
         }
+        val drained = drainer.drain(
+            isStopped = { isStopped },
+            onProgress = { published, total ->
+                lastPublished = published
+                lastTotal = total
+                if (total >= FOREGROUND_MIN_FILES) show(foregroundInfo(published, total))
+            },
+            onWaiting = { secondsLeft ->
+                show(foregroundInfo(lastPublished, lastTotal, secondsLeft))
+            }
+        )
         return if (drained) Result.success() else Result.retry()
     }
 
-    private fun foregroundInfo(published: Int, total: Int): ForegroundInfo {
+    private fun foregroundInfo(
+        published: Int,
+        total: Int,
+        waitSeconds: Int? = null
+    ): ForegroundInfo {
+        val progressText = applicationContext.getString(
+            R.string.notification_publish_progress,
+            published,
+            total
+        )
+        val text = waitSeconds?.let {
+            applicationContext.getString(
+                R.string.notification_publish_waiting,
+                "%d:%02d".format(it / 60, it % 60)
+            )
+        } ?: progressText
         val notification = NotificationCompat.Builder(
             applicationContext,
             AppNotifications.CHANNEL_TRANSFERS
         )
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(applicationContext.getString(R.string.notification_publish_title))
-            .setContentText(
-                applicationContext.getString(
-                    R.string.notification_publish_progress,
-                    published,
-                    total
-                )
-            )
-            .setProgress(total, published, false)
+            .setContentText(text)
+            .setSubText(if (waitSeconds != null && total > 0) progressText else null)
+            .setProgress(total, published, total == 0)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(

@@ -50,6 +50,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
@@ -134,6 +135,9 @@ import com.drdisagree.teledrive.resources.home_lock_app
 import com.drdisagree.teledrive.resources.home_not_backed_up_count
 import com.drdisagree.teledrive.resources.home_open_drives
 import com.drdisagree.teledrive.resources.home_queued_uploads_discarded_files
+import com.drdisagree.teledrive.resources.home_saving_changes
+import com.drdisagree.teledrive.resources.home_saving_changes_left
+import com.drdisagree.teledrive.resources.home_saving_folder_changes
 import com.drdisagree.teledrive.resources.home_scan_now
 import com.drdisagree.teledrive.resources.home_scanning
 import com.drdisagree.teledrive.resources.home_section_favorites
@@ -147,6 +151,7 @@ import com.drdisagree.teledrive.resources.home_status_rebuilding
 import com.drdisagree.teledrive.resources.home_status_syncing
 import com.drdisagree.teledrive.resources.home_storage_percent
 import com.drdisagree.teledrive.resources.home_storage_percent_min
+import com.drdisagree.teledrive.resources.home_sync_now
 import com.drdisagree.teledrive.resources.home_transfer_history
 import com.drdisagree.teledrive.resources.home_transfer_history_subtitle
 import com.drdisagree.teledrive.resources.home_waiting_count
@@ -173,6 +178,9 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var lastConnectionStatus by remember { mutableStateOf<ConnectionStatus?>(null) }
     val scanning by viewModel.scanning.collectAsStateWithLifecycle()
+    val pendingSync by viewModel.pendingSync.collectAsStateWithLifecycle()
+    var shownSync by remember { mutableStateOf(pendingSync) }
+    if (pendingSync.visible) shownSync = pendingSync
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val lifecycleOwner = LocalLifecycleOwner.current
     val permissionRequester = LocalPermissionRequester.current
@@ -277,121 +285,140 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (state.missingPermissions.isNotEmpty()) {
-                item {
-                    PermissionWarningCard(
-                        missing = state.missingPermissions,
-                        onGrant = {
-                            permissionRequester.request(state.missingPermissions) {
-                                viewModel.refreshPermissions()
+                item(key = "permissions") {
+                    Column(Modifier.animateItem()) {
+                        PermissionWarningCard(
+                            missing = state.missingPermissions,
+                            onGrant = {
+                                permissionRequester.request(state.missingPermissions) {
+                                    viewModel.refreshPermissions()
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
             if (capabilities.supportsAutoBackup) {
-                item {
-                    BackupCard(
-                        state = state,
-                        scanning = scanning,
-                        onChooseFolders = onOpenBackupSettings,
-                        onScanNow = viewModel::scanNow,
-                        onBackUpPending = viewModel::backUpPending,
-                        onPause = viewModel::pauseBackup,
-                        onResume = viewModel::resumeBackup,
-                        onCancel = { confirmCancelBackup = it }
-                    )
+                item(key = "backup") {
+                    Column(Modifier.animateItem()) {
+                        BackupCard(
+                            state = state,
+                            scanning = scanning,
+                            onChooseFolders = onOpenBackupSettings,
+                            onScanNow = viewModel::scanNow,
+                            onBackUpPending = viewModel::backUpPending,
+                            onPause = viewModel::pauseBackup,
+                            onResume = viewModel::resumeBackup,
+                            onCancel = { confirmCancelBackup = it }
+                        )
+                    }
+                }
+            }
+            if (pendingSync.visible) {
+                item(key = "pending-sync") {
+                    Column(Modifier.animateItem()) {
+                        PendingSyncCard(pending = shownSync, onSyncNow = viewModel::syncNow)
+                    }
                 }
             }
             if (state.favoriteFolders.isNotEmpty()) {
-                item {
-                    SectionHeader(stringResource(Res.string.home_section_favorites))
-                    Spacer(Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        state.favoriteFolders.take(5).forEach { folder ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable(role = Role.Button) { onOpenFolder(folder.id) }
-                                    .padding(vertical = 8.dp, horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Filled.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    folder.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                item(key = "favorites") {
+                    Column(Modifier.animateItem()) {
+                        SectionHeader(stringResource(Res.string.home_section_favorites))
+                        Spacer(Modifier.height(8.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            state.favoriteFolders.take(5).forEach { folder ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .clickable(role = Role.Button) { onOpenFolder(folder.id) }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Folder,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        folder.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
             if (state.showRecentSection && state.recentFiles.isNotEmpty()) {
-                item {
-                    SectionHeader(stringResource(Res.string.home_section_recent))
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(state.recentFiles, key = { it.id }) { file ->
-                            Column(
-                                modifier = Modifier
-                                    .width(112.dp)
-                                    .clip(MaterialTheme.shapes.large)
-                                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                                    .clickable(role = Role.Button) {
-                                        onOpenFile(
-                                            file.id,
-                                            PreviewSequence(
-                                                sortField = FileSortField.DATE_ADDED,
-                                                sortDirection = SortDirection.DESCENDING
-                                            )
-                                        )
-                                    }
-                                    .padding(6.dp)
-                            ) {
-                                FileThumbnail(
-                                    file = file,
-                                    contentDescription = null,
+                item(key = "recent") {
+                    Column(Modifier.animateItem()) {
+                        SectionHeader(stringResource(Res.string.home_section_recent))
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(state.recentFiles, key = { it.id }) { file ->
+                                Column(
                                     modifier = Modifier
-                                        .size(100.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = file.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 2.dp)
-                                )
+                                        .width(112.dp)
+                                        .clip(MaterialTheme.shapes.large)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                        .clickable(role = Role.Button) {
+                                            onOpenFile(
+                                                file.id,
+                                                PreviewSequence(
+                                                    sortField = FileSortField.DATE_ADDED,
+                                                    sortDirection = SortDirection.DESCENDING
+                                                )
+                                            )
+                                        }
+                                        .padding(6.dp)
+                                ) {
+                                    FileThumbnail(
+                                        file = file,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = file.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(horizontal = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
             if (state.storage.isNotEmpty()) {
-                item {
-                    SectionHeader(stringResource(Res.string.home_section_storage))
-                    Spacer(Modifier.height(8.dp))
-                    StorageCard(slices = state.storage)
+                item(key = "storage") {
+                    Column(Modifier.animateItem()) {
+                        SectionHeader(stringResource(Res.string.home_section_storage))
+                        Spacer(Modifier.height(8.dp))
+                        StorageCard(slices = state.storage)
+                    }
                 }
             }
-            item {
-                CollectionLinks(
-                    showArchived = state.showArchivedSection,
-                    showHidden = state.showHiddenSection,
-                    activeTransferCount = state.activeTransferCount,
-                    offlineBytes = state.offlineBytes,
-                    onOpenCollection = onOpenCollection,
-                    onOpenTransfers = onOpenTransfers,
-                    onOpenTrash = onOpenTrash
-                )
+            item(key = "collections") {
+                Column(Modifier.animateItem()) {
+                    CollectionLinks(
+                        showArchived = state.showArchivedSection,
+                        showHidden = state.showHiddenSection,
+                        activeTransferCount = state.activeTransferCount,
+                        offlineBytes = state.offlineBytes,
+                        onOpenCollection = onOpenCollection,
+                        onOpenTransfers = onOpenTransfers,
+                        onOpenTrash = onOpenTrash
+                    )
+                }
             }
         }
     }
@@ -451,6 +478,49 @@ private fun CollectionLinks(
                 subtitle = stringResource(Res.string.home_deleted_files_kept_removal),
                 onClick = onOpenTrash
             )
+        }
+    }
+}
+
+@Composable
+private fun PendingSyncCard(pending: PendingSync, onSyncNow: () -> Unit) {
+    GroupedList(horizontalPadding = 0.dp) {
+        add {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CloudSync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(Res.string.home_saving_changes),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (pending.files > 0) {
+                            pluralStringResource(
+                                Res.plurals.home_saving_changes_left,
+                                pending.files,
+                                pending.files
+                            )
+                        } else {
+                            stringResource(Res.string.home_saving_folder_changes)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = onSyncNow, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(Res.string.home_sync_now))
+                }
+            }
         }
     }
 }

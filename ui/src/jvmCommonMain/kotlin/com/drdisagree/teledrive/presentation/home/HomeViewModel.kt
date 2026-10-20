@@ -7,9 +7,11 @@ import com.drdisagree.teledrive.core.network.NetworkMonitor
 import com.drdisagree.teledrive.core.network.NetworkStatus
 import com.drdisagree.teledrive.core.permissions.PermissionChecker
 import com.drdisagree.teledrive.core.power.PowerMonitor
+import com.drdisagree.teledrive.core.publish.PublishScheduler
 import com.drdisagree.teledrive.core.security.AppLockManager
 import com.drdisagree.teledrive.core.transfer.BackupGate
 import com.drdisagree.teledrive.data.local.dao.FileDao
+import com.drdisagree.teledrive.data.local.dao.FolderDao
 import com.drdisagree.teledrive.data.repository.ActiveChannel
 import com.drdisagree.teledrive.domain.model.BackupTrigger
 import com.drdisagree.teledrive.domain.model.DriveChannel
@@ -62,7 +64,9 @@ class HomeViewModel(
     private val fileDao: FileDao,
     private val activeChannel: ActiveChannel,
     private val channelRepository: ChannelRepository,
-    private val powerMonitor: PowerMonitor
+    private val powerMonitor: PowerMonitor,
+    private val folderDao: FolderDao,
+    private val publishScheduler: PublishScheduler
 ) : ViewModel() {
 
     private val missingPermissions = MutableStateFlow(permissionChecker.missingCritical())
@@ -214,6 +218,14 @@ class HomeViewModel(
             _messages.tryEmit(message)
         }
     }
+
+    val pendingSync: StateFlow<PendingSync> = combine(
+        fileDao.observePendingPublishCount(),
+        folderDao.observePendingPublishCount()
+    ) { files, folders -> PendingSync(files, folders > 0) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PendingSync())
+
+    fun syncNow() = publishScheduler.kick()
 
     fun scanNow() {
         if (_scanning.value) return

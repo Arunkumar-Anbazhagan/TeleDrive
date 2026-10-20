@@ -45,6 +45,7 @@
     <string name="notification_downloading_many">Baixando %1$d de %2$d arquivos</string>
     <string name="notification_downloading_one">Baixando um arquivo</string>
     <string name="notification_publish_progress">%1$d de %2$d arquivos atualizados</string>
+    <string name="notification_publish_waiting">Pausado pelo limite do Telegram · continuando em %1$s</string>
     <string name="notification_publish_title">Salvando alterações no Telegram</string>
     <string name="notification_transfer_and_more">%1$s e mais %2$d</string>
     <string name="notification_transferring_many">Transferindo %1$d de %2$d arquivos</string>

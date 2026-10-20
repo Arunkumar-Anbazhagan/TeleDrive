@@ -57,6 +57,12 @@
         <item quantity="many">Пропущено %1$d зашифрованных файлов. Восстановите резервную копию ключа для индексации.</item>
         <item quantity="other">Пропущено %1$d зашифрованных файлов. Восстановите резервную копию ключа для индексации.</item>
     </plurals>
+    <plurals name="home_saving_changes_left">
+        <item quantity="one">Остался %1$d файл</item>
+        <item quantity="few">Осталось %1$d файла</item>
+        <item quantity="many">Осталось %1$d файлов</item>
+        <item quantity="other">Осталось %1$d файла</item>
+    </plurals>
     <plurals name="home_back_up_pending">
         <item quantity="one">Резервное копирование %1$d файла</item>
         <item quantity="few">Резервное копирование %1$d файлов</item>
@@ -287,8 +293,11 @@
     <string name="home_nothing_new_to_back_up">Нет новых файлов для бэкапа</string>
     <string name="home_open_drives">Сменить диск</string>
     <string name="home_queued_uploads_discarded_files">Загрузки в очереди отменены. Уже загруженные файлы останутся в Telegram.</string>
+    <string name="home_saving_changes">Сохранение изменений в Telegram</string>
+    <string name="home_saving_folder_changes">Изменения папок ожидают отправки</string>
     <string name="home_scan_now">Сканировать</string>
     <string name="home_scanning">Сканирование…</string>
+    <string name="home_sync_now">Синхронизировать</string>
     <string name="home_section_favorites">Избранное</string>
     <string name="home_section_recent">Недавние</string>
     <string name="home_section_storage">Хранилище</string>
