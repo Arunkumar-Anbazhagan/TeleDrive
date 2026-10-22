@@ -300,6 +300,12 @@
     <string name="files_import_copied">已复制 %1$d 个 Telegram 中已有的文件</string>
     <string name="files_import_duplicates">%1$d 个已存在于你的云端硬盘</string>
     <string name="files_import_failed">无法导入所选文件</string>
+    <string name="files_folder_exists_title">“%1$s”已存在</string>
+    <string name="files_folders_exist_title">这些文件夹已存在</string>
+    <string name="files_folder_exists_message">合并会把新文件加入现有文件夹。保留两者会另外上传一个名为“%1$s”的文件夹。</string>
+    <string name="files_folders_exist_message">合并会把新文件加入现有文件夹。保留两者会另外上传名称带编号的文件夹。</string>
+    <string name="files_folder_merge">合并</string>
+    <string name="files_folder_keep_both">保留两者</string>
     <string name="files_import_preparing">正在准备上传文件…</string>
     <string name="files_import_restored">已从回收站恢复 %1$d 个</string>
     <string name="files_import_uploading">正在上传 %1$d 个</string>

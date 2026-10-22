@@ -312,6 +312,12 @@
     <string name="files_import_copied">Copied %1$d already in Telegram</string>
     <string name="files_import_duplicates">%1$d already in your drive</string>
     <string name="files_import_failed">Could not import the selected files</string>
+    <string name="files_folder_exists_title">“%1$s” already exists</string>
+    <string name="files_folders_exist_title">These folders already exist</string>
+    <string name="files_folder_exists_message">Merge adds the new files to the existing folder. Keep both uploads a separate folder named “%1$s”.</string>
+    <string name="files_folders_exist_message">Merge adds the new files to the existing folders. Keep both uploads separate folders with a number added to each name.</string>
+    <string name="files_folder_merge">Merge</string>
+    <string name="files_folder_keep_both">Keep both</string>
     <string name="files_import_preparing">Preparing files for upload…</string>
     <string name="files_import_restored">Restored %1$d from trash</string>
     <string name="files_import_uploading">Uploading %1$d</string>

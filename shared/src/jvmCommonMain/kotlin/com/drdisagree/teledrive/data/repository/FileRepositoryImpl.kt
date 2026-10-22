@@ -228,6 +228,9 @@ class FileRepositoryImpl(
             folderDao.observeHidden(chatId).map { list -> list.map { it.toDomain() } }
         }
 
+    override suspend fun folderNamesIn(parentId: String?): List<String> =
+        folderDao.namesIn(parentId, activeChannel.id())
+
     override suspend fun createFolder(parentId: String?, name: String): AppResult<DriveFolder> {
         val sanitized = FileNameUtils.sanitize(name)
         val siblings = folderDao.namesIn(parentId, activeChannel.id())

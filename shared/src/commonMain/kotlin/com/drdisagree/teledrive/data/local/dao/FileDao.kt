@@ -58,6 +58,12 @@ interface FileDao {
     @Query("SELECT COUNT(*) FROM files WHERE pendingPublish = 1")
     suspend fun pendingPublishCount(): Int
 
+    @Query("UPDATE files SET folderId = :to WHERE folderId = :from")
+    suspend fun moveAllBetweenFolders(from: String, to: String)
+
+    @Query("UPDATE files SET preTrashFolderId = :to WHERE preTrashFolderId = :from")
+    suspend fun retargetTrashedBetweenFolders(from: String, to: String)
+
     @Query("SELECT COUNT(*) FROM files WHERE pendingPublish = 1")
     fun observePendingPublishCount(): Flow<Int>
 

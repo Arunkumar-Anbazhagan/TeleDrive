@@ -35,7 +35,8 @@ class FolderStateSynchronizer(
     private val tombstoneDao: FolderTombstoneDao,
     private val settingsRepository: SettingsRepository,
     private val streamCrypto: StreamCrypto,
-    private val wrappedKeyRepository: WrappedKeyRepository
+    private val wrappedKeyRepository: WrappedKeyRepository,
+    private val folderMerger: FolderMerger
 ) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
@@ -184,6 +185,7 @@ class FolderStateSynchronizer(
         tombstoneDao.upsert(
             state.deleted.map { FolderTombstoneEntity(it.id, chatId, it.deletedAt) }
         )
+        changed += folderMerger.mergeDuplicates(chatId)
         val all = folderDao.allFolders(chatId)
         for (deletion in state.deleted) {
             val folder = all.firstOrNull { it.id == deletion.id } ?: continue

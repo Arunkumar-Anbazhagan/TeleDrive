@@ -312,6 +312,12 @@
     <string name="files_import_copied">%1$d que já estavam no Telegram foram copiados</string>
     <string name="files_import_duplicates">%1$d já estão no seu drive</string>
     <string name="files_import_failed">Não foi possível importar os arquivos selecionados</string>
+    <string name="files_folder_exists_title">“%1$s” já existe</string>
+    <string name="files_folders_exist_title">Estas pastas já existem</string>
+    <string name="files_folder_exists_message">Mesclar adiciona os novos arquivos à pasta existente. Manter ambas envia uma pasta separada chamada “%1$s”.</string>
+    <string name="files_folders_exist_message">Mesclar adiciona os novos arquivos às pastas existentes. Manter ambas envia pastas separadas com um número no nome.</string>
+    <string name="files_folder_merge">Mesclar</string>
+    <string name="files_folder_keep_both">Manter ambas</string>
     <string name="files_import_preparing">Preparando arquivos para envio…</string>
     <string name="files_import_restored">%1$d restaurados da lixeira</string>
     <string name="files_import_uploading">Enviando %1$d</string>

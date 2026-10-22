@@ -30,6 +30,13 @@ internal class SyncHarness : AutoCloseable {
         database.folderTombstoneDao()
     )
     val storagePaths = FakeStoragePaths()
+    val folderMerger = FolderMerger(
+        database.folderDao(),
+        database.fileDao(),
+        database.folderTombstoneDao(),
+        scheduler,
+        database
+    )
     val folderState = FolderStateSynchronizer(
         storagePaths,
         telegram,
@@ -37,7 +44,8 @@ internal class SyncHarness : AutoCloseable {
         database.folderTombstoneDao(),
         settings,
         StreamCrypto(),
-        unused<WrappedKeyRepository>()
+        unused<WrappedKeyRepository>(),
+        folderMerger
     )
 
     fun newSync() = SyncRepositoryImpl(
@@ -55,6 +63,7 @@ internal class SyncHarness : AutoCloseable {
             database.exclusionDao()
         ),
         folderStateSynchronizer = folderState,
+        folderMerger = folderMerger,
         publishScheduler = scheduler,
         settingsRepository = settings,
         database = database

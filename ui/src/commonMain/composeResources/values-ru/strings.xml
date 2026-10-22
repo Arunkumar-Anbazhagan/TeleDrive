@@ -336,6 +336,12 @@
     <string name="files_import_copied">Скопировано %1$d уже имеющихся в Telegram</string>
     <string name="files_import_duplicates">%1$d уже есть на вашем диске</string>
     <string name="files_import_failed">Не удалось импортировать выбранные файлы</string>
+    <string name="files_folder_exists_title">«%1$s» уже существует</string>
+    <string name="files_folders_exist_title">Эти папки уже существуют</string>
+    <string name="files_folder_exists_message">При объединении новые файлы добавятся в существующую папку. Если оставить обе, загрузится отдельная папка «%1$s».</string>
+    <string name="files_folders_exist_message">При объединении новые файлы добавятся в существующие папки. Если оставить обе, загрузятся отдельные папки с номером в названии.</string>
+    <string name="files_folder_merge">Объединить</string>
+    <string name="files_folder_keep_both">Оставить обе</string>
     <string name="files_import_preparing">Подготовка файлов к загрузке…</string>
     <string name="files_import_restored">Восстановлено %1$d из корзины</string>
     <string name="files_import_uploading">Загрузка %1$d</string>

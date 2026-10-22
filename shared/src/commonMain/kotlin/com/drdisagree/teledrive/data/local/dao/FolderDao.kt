@@ -26,6 +26,15 @@ interface FolderDao {
     @Query("SELECT COUNT(*) FROM folders WHERE pendingPublish = 1")
     suspend fun pendingPublishCount(): Int
 
+    @Query("UPDATE folders SET parentId = :to, changedAt = :changedAt WHERE parentId = :from")
+    suspend fun reparentChildren(from: String, to: String, changedAt: Long)
+
+    @Query(
+        """UPDATE folders SET preTrashParentId = :to, changedAt = :changedAt
+           WHERE preTrashParentId = :from"""
+    )
+    suspend fun retargetTrashedChildren(from: String, to: String, changedAt: Long)
+
     @Query("SELECT COUNT(*) FROM folders WHERE pendingPublish = 1")
     fun observePendingPublishCount(): Flow<Int>
 

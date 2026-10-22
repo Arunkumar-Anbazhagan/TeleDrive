@@ -57,6 +57,9 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +71,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -151,6 +155,7 @@ import com.drdisagree.teledrive.resources.common_actions
 import com.drdisagree.teledrive.resources.common_add
 import com.drdisagree.teledrive.resources.common_add_favorites
 import com.drdisagree.teledrive.resources.common_back
+import com.drdisagree.teledrive.resources.common_cancel
 import com.drdisagree.teledrive.resources.common_clear_selection
 import com.drdisagree.teledrive.resources.common_confirm_trash_count_title
 import com.drdisagree.teledrive.resources.common_create
@@ -178,6 +183,12 @@ import com.drdisagree.teledrive.resources.files_copy_here
 import com.drdisagree.teledrive.resources.files_copy_to
 import com.drdisagree.teledrive.resources.files_delete_local
 import com.drdisagree.teledrive.resources.files_delete_local_copies
+import com.drdisagree.teledrive.resources.files_folder_exists_message
+import com.drdisagree.teledrive.resources.files_folder_exists_title
+import com.drdisagree.teledrive.resources.files_folder_keep_both
+import com.drdisagree.teledrive.resources.files_folder_merge
+import com.drdisagree.teledrive.resources.files_folders_exist_message
+import com.drdisagree.teledrive.resources.files_folders_exist_title
 import com.drdisagree.teledrive.resources.files_hide
 import com.drdisagree.teledrive.resources.files_move
 import com.drdisagree.teledrive.resources.files_move_here
@@ -722,6 +733,53 @@ fun FilesScreen(
                 )
             }
         }
+    }
+
+    val folderConflict by viewModel.folderConflict.collectAsStateWithLifecycle()
+    folderConflict?.let { conflict ->
+        val single = conflict.names.singleOrNull()
+        AlertDialog(
+            onDismissRequest = viewModel::cancelFolderImport,
+            title = {
+                Text(
+                    if (single != null) {
+                        stringResource(Res.string.files_folder_exists_title, single)
+                    } else {
+                        stringResource(Res.string.files_folders_exist_title)
+                    }
+                )
+            },
+            text = {
+                Text(
+                    if (single != null) {
+                        stringResource(
+                            Res.string.files_folder_exists_message,
+                            conflict.renamed.getValue(single)
+                        )
+                    } else {
+                        stringResource(Res.string.files_folders_exist_message)
+                    }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = viewModel::mergeIntoExistingFolders,
+                    shapes = ButtonDefaults.shapes()
+                ) { Text(stringResource(Res.string.files_folder_merge)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = viewModel::cancelFolderImport,
+                        shapes = ButtonDefaults.shapes()
+                    ) { Text(stringResource(Res.string.common_cancel)) }
+                    TextButton(
+                        onClick = viewModel::keepBothFolders,
+                        shapes = ButtonDefaults.shapes()
+                    ) { Text(stringResource(Res.string.files_folder_keep_both)) }
+                }
+            }
+        )
     }
 
     if (showMovePicker || showCopyPicker) {
