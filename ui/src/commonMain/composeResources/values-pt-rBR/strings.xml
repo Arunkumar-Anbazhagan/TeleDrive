@@ -351,6 +351,7 @@
     <string name="files_unhide">Reexibir</string>
     <string name="files_copied_all">%1$d copiados</string>
     <string name="files_copied_partial">%1$d de %2$d copiados</string>
+    <string name="files_cut_count">%1$d recortados. Abra uma pasta e pressione Ctrl+V para movê-los para lá</string>
     <string name="files_moving_to_trash">Movendo %1$d para a lixeira…</string>
     <string name="files_queued_for_download">%1$d na fila para download</string>
     <string name="files_queued_for_upload">%1$d na fila para envio</string>
@@ -514,12 +515,14 @@
 
     <!-- Trash -->
     <string name="trash">Lixeira</string>
+    <string name="trash_auto_clear_after_days">Os itens são excluídos permanentemente após %1$d dias.</string>
     <string name="trash_delete_permanently">Excluir permanentemente?</string>
     <string name="trash_delete_selected_message">%1$d itens, incluindo tudo dentro de qualquer pasta selecionada, serão excluídos permanentemente deste dispositivo e do Telegram.</string>
     <string name="trash_empty">A lixeira está vazia</string>
     <string name="trash_empty_trash_action">Esvaziar lixeira</string>
     <string name="trash_empty_trash_title">Esvaziar lixeira?</string>
     <string name="trash_items_permanently_deleted_device">Todos os itens serão excluídos permanentemente deste dispositivo e do Telegram. Esta ação não pode ser desfeita.</string>
+    <string name="trash_kept_until_removed">Os itens excluídos ficam aqui até você removê-los.</string>
     <string name="trash_restores_with_folder">Restaura junto com a pasta</string>
     <string name="trash_trashed_at">Movido para a lixeira em %1$s</string>
     <string name="trash_delete_partial">Não foi possível excluir %1$d de %2$d</string>

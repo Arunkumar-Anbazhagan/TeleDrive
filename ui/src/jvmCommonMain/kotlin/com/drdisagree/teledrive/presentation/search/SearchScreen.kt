@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -46,13 +46,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.drdisagree.teledrive.domain.model.FileCategory
 import com.drdisagree.teledrive.presentation.common.AppBackHandler
 import com.drdisagree.teledrive.presentation.components.ActionMenu
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.EmptyState
 import com.drdisagree.teledrive.presentation.components.FileListItem
 import com.drdisagree.teledrive.presentation.components.FolderRow
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.LoadingState
 import com.drdisagree.teledrive.presentation.components.MenuAction
 import com.drdisagree.teledrive.presentation.components.label
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.presentation.preview.PreviewSequence
 import com.drdisagree.teledrive.resources.Res
@@ -93,6 +97,27 @@ fun SearchScreen(
     var showSelectionMenu by remember { mutableStateOf(false) }
 
     AppBackHandler(enabled = state.selectionMode) { viewModel.clearSelection() }
+
+    val folderStart = if (state.folders.isNotEmpty()) 1 else 0
+    val fileStart = if (state.folders.isNotEmpty()) {
+        folderStart + state.folders.size + if (state.results.isNotEmpty()) 1 else 0
+    } else {
+        0
+    }
+    val fileIdAt: (Int) -> String? = { index -> state.results.getOrNull(index - fileStart)?.id }
+    val keyboard = rememberKeyboardCollection(listState) { index ->
+        index >= fileStart || index in folderStart until folderStart + state.folders.size
+    }
+    val shortcuts = CollectionShortcuts(
+        onToggleSelect = { index -> fileIdAt(index)?.let(viewModel::toggleSelection) },
+        onSelectAll = viewModel::selectAll,
+        onDelete = { index ->
+            if (!state.selectionMode) fileIdAt(index)?.let(viewModel::toggleSelection)
+            viewModel.trashSelected()
+        },
+        onBack = onBack,
+        onClear = if (state.selectionMode) viewModel::clearSelection else null
+    )
 
     Scaffold(
         topBar = {
@@ -190,7 +215,13 @@ fun SearchScreen(
 
                 else -> LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .keyboardCollection(
+                            keyboard,
+                            state.folders.size + state.results.size,
+                            shortcuts
+                        ),
                     contentPadding = PaddingValues(
                         start = 12.dp,
                         end = 12.dp,
@@ -205,11 +236,13 @@ fun SearchScreen(
                                 modifier = Modifier.animateItem()
                             )
                         }
-                        items(state.folders, key = { "folder_${it.id}" }) { folder ->
+                        itemsIndexed(state.folders, key = { _, it -> "folder_${it.id}" }) { index, folder ->
                             FolderRow(
                                 folder = folder,
                                 onClick = { onOpenFolder(folder.id, null) },
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier
+                                    .keyboardCollectionItem(keyboard, folderStart + index, index)
+                                    .animateItem()
                             )
                         }
                         if (state.results.isNotEmpty()) {
@@ -221,7 +254,7 @@ fun SearchScreen(
                             }
                         }
                     }
-                    items(state.results, key = { it.id }) { file ->
+                    itemsIndexed(state.results, key = { _, it -> it.id }) { index, file ->
                         FileListItem(
                             file = file,
                             selected = file.id in state.selection,
@@ -244,7 +277,13 @@ fun SearchScreen(
                                 }
                             },
                             onLongClick = { viewModel.toggleSelection(file.id) },
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier
+                                .keyboardCollectionItem(
+                                    keyboard,
+                                    fileStart + index,
+                                    state.folders.size + index
+                                )
+                                .animateItem()
                         )
                     }
                 }

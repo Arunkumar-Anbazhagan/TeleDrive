@@ -1,6 +1,9 @@
 package com.drdisagree.teledrive.presentation.settings
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -38,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,9 +58,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.drdisagree.teledrive.domain.model.Exclusion
 import com.drdisagree.teledrive.domain.model.ExclusionType
 import com.drdisagree.teledrive.presentation.common.add
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.presentation.platform.LocalFilePicker
 import com.drdisagree.teledrive.presentation.platform.LocalFolderPicker
@@ -149,16 +158,32 @@ fun ExclusionsScreen(
             )
             return@Scaffold
         }
+        val keyboard = rememberKeyboardCollection(listState)
+        val shortcuts = CollectionShortcuts(
+            onToggleSelect = { index ->
+                exclusions.getOrNull(index)?.let { viewModel.setEnabled(it.id, !it.enabled) }
+            },
+            onDelete = { index -> exclusions.getOrNull(index)?.let { exclusionToRemove = it } },
+            onBack = onBack
+        )
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardCollection(keyboard, exclusions.size, shortcuts),
             contentPadding = padding.add(top = 8.dp, bottom = 96.dp)
         ) {
-            items(exclusions, key = { it.id }) { exclusion ->
+            itemsIndexed(exclusions, key = { _, it -> it.id }) { index, exclusion ->
+                val interactionSource = remember { MutableInteractionSource() }
+                val actions = Modifier.focusProperties { canFocus = keyboard.current == index }
                 Row(
                     modifier = Modifier
+                        .keyboardCollectionItem(keyboard, index)
                         .animateItem()
                         .fillMaxWidth()
+                        .semantics(mergeDescendants = true) {}
+                        .indication(interactionSource, ripple())
+                        .focusable(interactionSource = interactionSource)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -179,9 +204,9 @@ fun ExclusionsScreen(
                     Switch(
                         checked = exclusion.enabled,
                         onCheckedChange = { viewModel.setEnabled(exclusion.id, it) },
-                        modifier = Modifier.semantics { contentDescription = exclusionLabel }
+                        modifier = actions.semantics { contentDescription = exclusionLabel }
                     )
-                    IconButton(onClick = { exclusionToRemove = exclusion }) {
+                    IconButton(onClick = { exclusionToRemove = exclusion }, modifier = actions) {
                         Icon(
                             Icons.Filled.Delete,
                             contentDescription = stringResource(Res.string.settings_remove)

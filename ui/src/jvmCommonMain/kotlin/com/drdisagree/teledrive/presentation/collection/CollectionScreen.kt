@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -38,13 +38,17 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.drdisagree.teledrive.presentation.common.AppBackHandler
 import com.drdisagree.teledrive.presentation.common.isInitialLoad
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
 import com.drdisagree.teledrive.presentation.components.FileListItem
 import com.drdisagree.teledrive.presentation.components.FolderRow
 import com.drdisagree.teledrive.presentation.components.LoadingState
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
 import com.drdisagree.teledrive.presentation.components.rememberDragSelect
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.presentation.preview.PreviewSequence
 import com.drdisagree.teledrive.resources.Res
@@ -222,11 +226,30 @@ fun CollectionScreen(
             },
             onEnd = viewModel::endRangeSelection
         )
+        val keyboard = rememberKeyboardCollection(listState)
+        val toggleAt: (Int) -> Unit = { index ->
+            if (index < folders.size) {
+                viewModel.toggleFolderSelection(folders[index].id)
+            } else {
+                files.peek(index - folders.size)?.let { viewModel.toggleSelection(it.id) }
+            }
+        }
+        val shortcuts = CollectionShortcuts(
+            onToggleSelect = toggleAt,
+            onSelectAll = viewModel::selectAll,
+            onDelete = { index ->
+                if (!selectionMode) toggleAt(index)
+                confirmTrash = true
+            },
+            onBack = onBack,
+            onClear = if (selectionMode) viewModel::clearSelection else null
+        )
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = padding.calculateTopPadding())
+                .keyboardCollection(keyboard, folders.size + files.itemCount, shortcuts)
                 .then(dragSelect),
             contentPadding = PaddingValues(
                 start = 8.dp,
@@ -235,7 +258,7 @@ fun CollectionScreen(
                 bottom = 8.dp + padding.calculateBottomPadding()
             )
         ) {
-            items(folders, key = { "folder-${it.id}" }) { folder ->
+            itemsIndexed(folders, key = { _, it -> "folder-${it.id}" }) { index, folder ->
                 FolderRow(
                     folder = folder,
                     selected = folder.id in folderSelection,
@@ -246,7 +269,9 @@ fun CollectionScreen(
                         else onOpenFolder(folder.id)
                     },
                     onLongClick = { viewModel.toggleFolderSelection(folder.id) },
-                    modifier = Modifier.animateItem()
+                    modifier = Modifier
+                        .keyboardCollectionItem(keyboard, index)
+                        .animateItem()
                 )
             }
             items(
@@ -276,7 +301,9 @@ fun CollectionScreen(
                     } else {
                         null
                     },
-                    modifier = Modifier.animateItem()
+                    modifier = Modifier
+                        .keyboardCollectionItem(keyboard, folders.size + index)
+                        .animateItem()
                 )
             }
         }

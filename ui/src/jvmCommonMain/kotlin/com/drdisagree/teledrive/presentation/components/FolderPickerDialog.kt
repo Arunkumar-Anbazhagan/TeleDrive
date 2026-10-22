@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -67,6 +68,7 @@ fun FolderPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.backspaceUp(currentId?.let { id -> { currentId = parentOf(id) } }),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (currentId != null) {
@@ -116,10 +118,18 @@ fun FolderPickerDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
-                        items(children, key = { it.id }) { folder ->
+                    val listState = remember(currentId) { LazyListState() }
+                    val keyboard = rememberKeyboardCollection(listState)
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .heightIn(max = 280.dp)
+                            .keyboardCollection(keyboard, children.size)
+                    ) {
+                        itemsIndexed(children, key = { _, it -> it.id }) { index, folder ->
                             Row(
                                 modifier = Modifier
+                                    .keyboardCollectionItem(keyboard, index)
                                     .fillMaxWidth()
                                     .clickable(role = Role.Button) { currentId = folder.id }
                                     .padding(vertical = 10.dp),

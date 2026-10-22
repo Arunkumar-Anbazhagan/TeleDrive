@@ -16,6 +16,7 @@ import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
 import com.drdisagree.teledrive.resources.Res
+import com.drdisagree.teledrive.resources.files_cut_count
 import com.drdisagree.teledrive.resources.files_queued_for_download
 import com.drdisagree.teledrive.domain.model.DriveFile
 import com.drdisagree.teledrive.domain.model.FileCategory
@@ -28,6 +29,8 @@ import com.drdisagree.teledrive.domain.repository.SettingsRepository
 import com.drdisagree.teledrive.domain.repository.SyncRepository
 import com.drdisagree.teledrive.domain.repository.TransferRepository
 import com.drdisagree.teledrive.domain.repository.TrashRepository
+import com.drdisagree.teledrive.presentation.files.CutItems
+import com.drdisagree.teledrive.presentation.files.FileClipboard
 import com.drdisagree.teledrive.domain.usecase.MakeAvailableOfflineUseCase
 import com.drdisagree.teledrive.presentation.common.Formatters
 import com.drdisagree.teledrive.presentation.common.ListPosition
@@ -66,7 +69,8 @@ class GalleryViewModel(
     private val transferRepository: TransferRepository,
     private val settingsRepository: SettingsRepository,
     private val syncRepository: SyncRepository,
-    private val makeAvailableOffline: MakeAvailableOfflineUseCase
+    private val makeAvailableOffline: MakeAvailableOfflineUseCase,
+    private val clipboard: FileClipboard
 ) : ViewModel() {
 
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 8)
@@ -275,6 +279,8 @@ class GalleryViewModel(
         selection.update { emptySet() }
     }
 
+    fun hasSelection(): Boolean = selection.value.isNotEmpty()
+
     fun selectAll() {
         viewModelScope.launch {
             selection.update { fileRepository.fileIds(spec.first()).toSet() }
@@ -315,6 +321,14 @@ class GalleryViewModel(
         viewModelScope.launch { fileRepository.moveFiles(ids, targetFolderId).reportFailure() }
     }
 
+    fun cutSelected() {
+        val ids = selection.value.toList()
+        if (ids.isEmpty()) return
+        clearSelection()
+        clipboard.cut(CutItems(ids, emptyList()))
+        _messages.tryEmit(UiText.Resource(Res.string.files_cut_count, ids.size))
+    }
+
     fun trashSelected() {
         val ids = selection.value.toList()
         clearSelection()
@@ -341,7 +355,10 @@ class GalleryViewModel(
     val renameTarget: StateFlow<DriveFile?> = _renameTarget.asStateFlow()
 
     fun requestRenameSelected() {
-        val id = selection.value.singleOrNull() ?: return
+        requestRename(selection.value.singleOrNull() ?: return)
+    }
+
+    fun requestRename(id: String) {
         viewModelScope.launch { _renameTarget.value = fileRepository.getFile(id) }
     }
 

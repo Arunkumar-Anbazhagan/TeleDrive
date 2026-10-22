@@ -128,6 +128,7 @@ cmp-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", versi
 cmp-foundation = { group = "org.jetbrains.compose.foundation", name = "foundation", version.ref = "composeMultiplatform" }
 cmp-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
 cmp-ui-backhandler = { group = "org.jetbrains.compose.ui", name = "ui-backhandler", version.ref = "composeMultiplatform" }
+cmp-ui-test-junit4 = { group = "org.jetbrains.compose.ui", name = "ui-test-junit4", version.ref = "composeMultiplatform" }
 jna-platform = { group = "net.java.dev.jna", name = "jna-platform", version.ref = "jna" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 

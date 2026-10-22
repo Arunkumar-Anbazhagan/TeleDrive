@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -124,6 +124,7 @@ fun FileSystemFolderPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.backspaceUp(parentPath?.let { path -> { currentPath = path } }),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -229,12 +230,17 @@ fun FileSystemFolderPickerDialog(
                                 modifier = Modifier.padding(vertical = 16.dp)
                             )
                         } else {
-                            val listState = rememberLazyListState()
+                            val listState = remember(currentPath) { LazyListState() }
+                            val keyboard = rememberKeyboardCollection(listState)
                             Box(modifier = Modifier.heightIn(max = 260.dp)) {
-                                LazyColumn(state = listState) {
-                                    items(subfolders, key = { it.path }) { item ->
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.keyboardCollection(keyboard, subfolders.size)
+                                ) {
+                                    itemsIndexed(subfolders, key = { _, it -> it.path }) { index, item ->
                                         Row(
                                             modifier = Modifier
+                                                .keyboardCollectionItem(keyboard, index)
                                                 .fillMaxWidth()
                                                 .clickable(role = Role.Button) {
                                                     currentPath = item.path

@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -79,9 +79,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -93,9 +96,13 @@ import com.drdisagree.teledrive.domain.model.ProxyServer
 import com.drdisagree.teledrive.presentation.common.CollectSnackbarMessages
 import com.drdisagree.teledrive.presentation.common.add
 import com.drdisagree.teledrive.presentation.common.imeTargetBottomInset
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.common_actions
@@ -191,9 +198,17 @@ fun ProxyScreen(
             }
         }
     ) { padding ->
+        val proxyStart = 2
+        val keyboard = rememberKeyboardCollection(listState) { it >= proxyStart }
+        val shortcuts = CollectionShortcuts(
+            onDelete = { index -> state.proxies.getOrNull(index - proxyStart)?.let { pendingDelete = it } },
+            onBack = onBack
+        )
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardCollection(keyboard, state.proxies.size, shortcuts),
             contentPadding = padding.add(top = 8.dp, bottom = 96.dp)
         ) {
             item(key = ROUTING_CARD_KEY) {
@@ -227,14 +242,18 @@ fun ProxyScreen(
                         modifier = Modifier
                             .animateItem()
                             .padding(start = 24.dp, top = 24.dp, bottom = 8.dp)
+                            .semantics { heading() }
                     )
                 }
-                items(state.proxies, key = { it.id }) { proxy ->
+                itemsIndexed(state.proxies, key = { _, it -> it.id }) { index, proxy ->
                     ProxyCard(
                         proxy = proxy,
                         routing = state.enabled,
                         reachability = state.reachability[proxy.id],
-                        modifier = Modifier.animateItem(),
+                        actionsFocusable = keyboard.current == proxyStart + index,
+                        modifier = Modifier
+                            .keyboardCollectionItem(keyboard, proxyStart + index, index)
+                            .animateItem(),
                         onSelect = { viewModel.select(proxy.id) },
                         onTest = { viewModel.test(proxy) },
                         onEdit = {
@@ -364,6 +383,7 @@ private fun ProxyCard(
     proxy: ProxyServer,
     routing: Boolean,
     reachability: ProxyReachability?,
+    actionsFocusable: Boolean,
     modifier: Modifier = Modifier,
     onSelect: () -> Unit,
     onTest: () -> Unit,
@@ -426,7 +446,10 @@ private fun ProxyCard(
             }
             Spacer(Modifier.width(8.dp))
             Box {
-                IconButton(onClick = { menuOpen = true }) {
+                IconButton(
+                    onClick = { menuOpen = true },
+                    modifier = Modifier.focusProperties { canFocus = actionsFocusable }
+                ) {
                     Icon(
                         Icons.Filled.MoreVert,
                         contentDescription = stringResource(Res.string.common_actions)

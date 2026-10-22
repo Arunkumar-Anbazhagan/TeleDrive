@@ -22,7 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
@@ -98,7 +99,10 @@ import com.drdisagree.teledrive.presentation.components.GroupedList
 import com.drdisagree.teledrive.presentation.components.LoadingState
 import com.drdisagree.teledrive.presentation.components.PermissionWarningCard
 import com.drdisagree.teledrive.presentation.components.chartColor
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.label
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.navigation.LocalBottomBarInset
 import com.drdisagree.teledrive.presentation.platform.LocalPermissionRequester
 import com.drdisagree.teledrive.presentation.platform.LocalPlatformCapabilities
@@ -359,10 +363,20 @@ fun HomeScreen(
                     Column(Modifier.animateItem()) {
                         SectionHeader(stringResource(Res.string.home_section_recent))
                         Spacer(Modifier.height(8.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(state.recentFiles, key = { it.id }) { file ->
+                        val recentState = rememberLazyListState()
+                        val recentKeyboard = rememberKeyboardCollection(recentState, horizontal = true)
+                        LazyRow(
+                            state = recentState,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.keyboardCollection(
+                                recentKeyboard,
+                                state.recentFiles.size
+                            )
+                        ) {
+                            itemsIndexed(state.recentFiles, key = { _, it -> it.id }) { index, file ->
                                 Column(
                                     modifier = Modifier
+                                        .keyboardCollectionItem(recentKeyboard, index)
                                         .width(112.dp)
                                         .clip(MaterialTheme.shapes.large)
                                         .background(MaterialTheme.colorScheme.surfaceContainerLow)

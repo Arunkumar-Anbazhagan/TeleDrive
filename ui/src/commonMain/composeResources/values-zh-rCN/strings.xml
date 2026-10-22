@@ -339,6 +339,7 @@
     <string name="files_unhide">取消隐藏</string>
     <string name="files_copied_all">已复制 %1$d 个</string>
     <string name="files_copied_partial">已复制 %1$d 个，共 %2$d 个</string>
+    <string name="files_cut_count">已剪切 %1$d 项，打开文件夹后按 Ctrl+V 即可移动到该处</string>
     <string name="files_moving_to_trash">正在将 %1$d 项移入回收站…</string>
     <string name="files_queued_for_download">%1$d 个已排队下载</string>
     <string name="files_queued_for_upload">%1$d 个已排队上传</string>
@@ -502,12 +503,14 @@
 
     <!-- Trash -->
     <string name="trash">回收站</string>
+    <string name="trash_auto_clear_after_days">项目将在 %1$d 天后永久删除。</string>
     <string name="trash_delete_permanently">永久删除？</string>
     <string name="trash_delete_selected_message">%1$d 项（包括所选文件夹内的全部内容）将从本设备和 Telegram 中永久删除。</string>
     <string name="trash_empty">回收站是空的</string>
     <string name="trash_empty_trash_action">清空回收站</string>
     <string name="trash_empty_trash_title">清空回收站？</string>
     <string name="trash_items_permanently_deleted_device">所有项目都将从本设备和 Telegram 中永久删除，此操作无法撤销。</string>
+    <string name="trash_kept_until_removed">已删除的项目会一直保留在这里，直到你将其移除。</string>
     <string name="trash_restores_with_folder">随文件夹一起恢复</string>
     <string name="trash_trashed_at">于 %1$s 移入回收站</string>
     <string name="trash_delete_partial">有 %1$d / %2$d 项无法删除</string>

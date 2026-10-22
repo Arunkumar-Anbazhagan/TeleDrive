@@ -1,5 +1,8 @@
 package com.drdisagree.teledrive.presentation.transfers
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -52,9 +58,13 @@ import com.drdisagree.teledrive.domain.model.TransferTask
 import com.drdisagree.teledrive.domain.model.TransferType
 import com.drdisagree.teledrive.presentation.common.Formatters
 import com.drdisagree.teledrive.presentation.common.add
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.common_actions
@@ -212,9 +222,39 @@ fun TransfersScreen(
         val pausedTitle = stringResource(Res.string.transfers_section_paused)
         val finishedTitle = stringResource(Res.string.transfers_section_finished)
         val failedTitle = failedSectionTitle(state.failed)
+        val rows = buildList {
+            listOf(
+                state.active to state.activeTotal,
+                state.paused to state.pausedTotal,
+                state.failed to state.failedTotal,
+                state.completed to state.completedTotal
+            ).forEach { (transfers, total) ->
+                if (transfers.isEmpty()) return@forEach
+                add(null)
+                addAll(transfers)
+                if (total > transfers.size) add(null)
+            }
+        }
+        val keyboard = rememberKeyboardCollection(listState) { rows.getOrNull(it) != null }
+        val shortcuts = CollectionShortcuts(
+            onDelete = { index ->
+                rows.getOrNull(index)
+                    ?.takeIf { it !in state.completed }
+                    ?.let { viewModel.cancel(it.id) }
+            },
+            onBack = onBack
+        )
+        val itemModifier: (TransferTask) -> Modifier = { transfer ->
+            Modifier.keyboardCollectionItem(keyboard, rows.indexOf(transfer))
+        }
+        val actionsFocusable: (TransferTask) -> Boolean = { transfer ->
+            keyboard.current == rows.indexOf(transfer)
+        }
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardCollection(keyboard, rows.count { it != null }, shortcuts),
             contentPadding = padding.add(horizontal = 16.dp, top = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -224,7 +264,9 @@ fun TransfersScreen(
                     primaryIcon = Icons.Filled.Pause,
                     primaryLabel = stringResource(Res.string.common_pause),
                     onPrimary = { viewModel.pause(transfer.id) },
-                    onCancel = { viewModel.cancel(transfer.id) }
+                    onCancel = { viewModel.cancel(transfer.id) },
+                    actionsFocusable = actionsFocusable(transfer),
+                    modifier = itemModifier(transfer)
                 )
             }
             section("paused", pausedTitle, state.paused, state.pausedTotal) { transfer ->
@@ -233,7 +275,9 @@ fun TransfersScreen(
                     primaryIcon = Icons.Filled.PlayArrow,
                     primaryLabel = stringResource(Res.string.common_resume),
                     onPrimary = { viewModel.resume(transfer.id) },
-                    onCancel = { viewModel.cancel(transfer.id) }
+                    onCancel = { viewModel.cancel(transfer.id) },
+                    actionsFocusable = actionsFocusable(transfer),
+                    modifier = itemModifier(transfer)
                 )
             }
             section("failed", failedTitle, state.failed, state.failedTotal) { transfer ->
@@ -242,11 +286,13 @@ fun TransfersScreen(
                     primaryIcon = Icons.Filled.Refresh,
                     primaryLabel = stringResource(Res.string.common_retry),
                     onPrimary = { viewModel.retry(transfer.id) },
-                    onCancel = { viewModel.cancel(transfer.id) }
+                    onCancel = { viewModel.cancel(transfer.id) },
+                    actionsFocusable = actionsFocusable(transfer),
+                    modifier = itemModifier(transfer)
                 )
             }
             section("finished", finishedTitle, state.completed, state.completedTotal) { transfer ->
-                TransferRow(transfer = transfer)
+                TransferRow(transfer = transfer, modifier = itemModifier(transfer))
             }
         }
     }
@@ -324,9 +370,20 @@ private fun TransferRow(
     primaryIcon: ImageVector? = null,
     primaryLabel: String? = null,
     onPrimary: (() -> Unit)? = null,
-    onCancel: (() -> Unit)? = null
+    onCancel: (() -> Unit)? = null,
+    actionsFocusable: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
-    Card(shape = MaterialTheme.shapes.large) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val actions = Modifier.focusProperties { canFocus = actionsFocusable }
+    Card(
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier
+            .semantics(mergeDescendants = true) {}
+            .clip(MaterialTheme.shapes.large)
+            .indication(interactionSource, ripple())
+            .focusable(interactionSource = interactionSource)
+    ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TransferThumbnail(transfer = transfer)
@@ -366,12 +423,12 @@ private fun TransferRow(
                     )
                 }
                 if (primaryIcon != null && onPrimary != null) {
-                    IconButton(onClick = onPrimary) {
+                    IconButton(onClick = onPrimary, modifier = actions) {
                         Icon(primaryIcon, contentDescription = primaryLabel)
                     }
                 }
                 if (onCancel != null) {
-                    IconButton(onClick = onCancel) {
+                    IconButton(onClick = onCancel, modifier = actions) {
                         Icon(
                             imageVector = Icons.Filled.Cancel,
                             contentDescription = if (transfer.state.isTerminal) {

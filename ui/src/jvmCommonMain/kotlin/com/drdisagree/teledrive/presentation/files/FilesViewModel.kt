@@ -35,6 +35,7 @@ import com.drdisagree.teledrive.presentation.navigation.Route
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.files_copied_all
 import com.drdisagree.teledrive.resources.files_copied_partial
+import com.drdisagree.teledrive.resources.files_cut_count
 import com.drdisagree.teledrive.resources.files_import_copied
 import com.drdisagree.teledrive.resources.files_import_duplicates
 import com.drdisagree.teledrive.resources.files_import_failed
@@ -96,7 +97,8 @@ class FilesViewModel(
     private val syncRepository: SyncRepository,
     private val fileImporter: FileImporter,
     private val pendingShare: PendingShare,
-    private val makeAvailableOffline: MakeAvailableOfflineUseCase
+    private val makeAvailableOffline: MakeAvailableOfflineUseCase,
+    private val clipboard: FileClipboard
 ) : ViewModel() {
 
     private val folderId: String? = savedStateHandle.toRoute<Route.Files>().folderId
@@ -327,9 +329,10 @@ class FilesViewModel(
     private val _renameTarget = MutableStateFlow<RenameTarget?>(null)
     val renameTarget: StateFlow<RenameTarget?> = _renameTarget.asStateFlow()
 
-    fun requestRenameSelected() {
-        val fileId = selection.value.singleOrNull()
-        val folderId = folderSelection.value.singleOrNull()
+    fun requestRenameSelected() =
+        requestRename(selection.value.singleOrNull(), folderSelection.value.singleOrNull())
+
+    fun requestRename(fileId: String?, folderId: String?) {
         viewModelScope.launch {
             _renameTarget.value = when {
                 fileId != null && folderId == null ->
@@ -480,6 +483,24 @@ class FilesViewModel(
         val ids = selection.value.toList()
         val folderIds = folderSelection.value.toList()
         clearSelection()
+        move(ids, folderIds, targetFolderId)
+    }
+
+    fun cutSelected() {
+        val items = CutItems(selection.value.toList(), folderSelection.value.toList())
+        val total = items.fileIds.size + items.folderIds.size
+        if (total == 0) return
+        clearSelection()
+        clipboard.cut(items)
+        _messages.tryEmit(UiText.Resource(Res.string.files_cut_count, total))
+    }
+
+    fun paste() {
+        val items = clipboard.take() ?: return
+        move(items.fileIds, items.folderIds, folderId)
+    }
+
+    private fun move(ids: List<String>, folderIds: List<String>, targetFolderId: String?) {
         viewModelScope.launch {
             var failures = 0
             if (ids.isNotEmpty()) {

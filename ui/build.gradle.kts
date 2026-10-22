@@ -38,6 +38,13 @@ kotlin {
         named("desktopMain") {
             dependsOn(jvmCommonMain)
         }
+        named("desktopTest") {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.cmp.ui.test.junit4)
+                implementation(libs.junit)
+            }
+        }
         commonMain {
             dependencies {
                 api(project(":shared"))

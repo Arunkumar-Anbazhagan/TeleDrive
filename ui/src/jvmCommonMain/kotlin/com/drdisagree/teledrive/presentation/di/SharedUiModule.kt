@@ -3,6 +3,7 @@ package com.drdisagree.teledrive.presentation.di
 import com.drdisagree.teledrive.presentation.AppViewModel
 import com.drdisagree.teledrive.presentation.channels.ChannelsViewModel
 import com.drdisagree.teledrive.presentation.collection.CollectionViewModel
+import com.drdisagree.teledrive.presentation.files.FileClipboard
 import com.drdisagree.teledrive.presentation.files.FilesViewModel
 import com.drdisagree.teledrive.presentation.gallery.GalleryViewModel
 import com.drdisagree.teledrive.presentation.home.HomeViewModel
@@ -22,6 +23,7 @@ import org.koin.dsl.module
 
 val sharedUiModule = module {
     singleOf(::PreviewContentResolver)
+    singleOf(::FileClipboard)
     viewModelOf(::AppViewModel)
     viewModelOf(::PreviewViewModel)
     viewModelOf(::ChannelsViewModel)

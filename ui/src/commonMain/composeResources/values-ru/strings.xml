@@ -375,6 +375,7 @@
     <string name="files_unhide">Показать</string>
     <string name="files_copied_all">Скопировано %1$d</string>
     <string name="files_copied_partial">Скопировано %1$d из %2$d</string>
+    <string name="files_cut_count">Вырезано: %1$d. Откройте папку и нажмите Ctrl+V, чтобы переместить их туда</string>
     <string name="files_moving_to_trash">Перемещение %1$d в корзину…</string>
     <string name="files_queued_for_download">В очереди на скачивание: %1$d</string>
     <string name="files_queued_for_upload">В очереди на загрузку: %1$d</string>
@@ -538,12 +539,14 @@
 
     <!-- Trash -->
     <string name="trash">Корзина</string>
+    <string name="trash_auto_clear_after_days">Объекты удаляются навсегда через %1$d дн.</string>
     <string name="trash_delete_permanently">Удалить навсегда?</string>
     <string name="trash_delete_selected_message">%1$d элементов, включая содержимое выбранных папок, будут безвозвратно удалены из устройства и из Telegram.</string>
     <string name="trash_empty">Корзина пуста</string>
     <string name="trash_empty_trash_action">Очистить корзину</string>
     <string name="trash_empty_trash_title">Очистить корзину?</string>
     <string name="trash_items_permanently_deleted_device">Все элементы будут навсегда удалены с устройства и из Telegram. Это действие нельзя отменить.</string>
+    <string name="trash_kept_until_removed">Удалённые объекты хранятся здесь, пока вы их не удалите.</string>
     <string name="trash_restores_with_folder">Восстанавливается вместе с папкой</string>
     <string name="trash_trashed_at">Удалено %1$s</string>
     <string name="trash_delete_partial">%1$d из %2$d не удалось удалить</string>

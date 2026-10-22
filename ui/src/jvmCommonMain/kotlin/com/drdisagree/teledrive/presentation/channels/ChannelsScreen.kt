@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -60,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -74,8 +76,12 @@ import com.drdisagree.teledrive.presentation.common.add
 import com.drdisagree.teledrive.presentation.common.resolve
 import com.drdisagree.teledrive.presentation.components.BlockingProgressDialog
 import com.drdisagree.teledrive.presentation.components.ChannelAvatar
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.EmptyState
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.channels_channel_container
@@ -208,20 +214,33 @@ fun ChannelsScreen(
             return@Scaffold
         }
 
+        val keyboard = rememberKeyboardCollection(listState)
+        val shortcuts = CollectionShortcuts(
+            onDelete = { index ->
+                if (channels.size > 1) channels.getOrNull(index)?.let { deleteTarget = it }
+            },
+            onRename = { index -> channels.getOrNull(index)?.let { renameTarget = it } },
+            onBack = onBack
+        )
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardCollection(keyboard, channels.size, shortcuts),
             contentPadding = padding.add(horizontal = 16.dp, top = 8.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(channels, key = { it.chatId }) { channel ->
+            itemsIndexed(channels, key = { _, it -> it.chatId }) { index, channel ->
                 ChannelRow(
                     channel = channel,
                     onOpen = { viewModel.switchTo(channel.chatId) },
                     onRename = { renameTarget = channel },
                     onDelete = { deleteTarget = channel },
                     canDelete = channels.size > 1,
-                    modifier = Modifier.animateItem(
+                    actionsFocusable = keyboard.current == index,
+                    modifier = Modifier
+                        .keyboardCollectionItem(keyboard, index)
+                        .animateItem(
                         fadeInSpec = tween(ROW_FADE_MS),
                         fadeOutSpec = tween(ROW_FADE_MS),
                         placementSpec = spring(
@@ -242,6 +261,7 @@ private fun ChannelRow(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     canDelete: Boolean,
+    actionsFocusable: Boolean,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -262,6 +282,7 @@ private fun ChannelRow(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(container)
             .clickable(enabled = !channel.isActive, role = Role.Button, onClick = onOpen)
+            .focusable(enabled = channel.isActive)
             .semantics { selected = channel.isActive }
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
@@ -299,7 +320,10 @@ private fun ChannelRow(
             )
         }
         Box {
-            IconButton(onClick = { showMenu = true }) {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.focusProperties { canFocus = actionsFocusable }
+            ) {
                 Icon(
                     Icons.Filled.MoreVert,
                     contentDescription = stringResource(Res.string.channels_drive_actions)

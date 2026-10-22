@@ -26,6 +26,7 @@ import com.drdisagree.teledrive.resources.preview_remove_favorites
 import androidx.compose.material3.SnackbarHostState
 import com.drdisagree.teledrive.presentation.common.CollectSnackbarMessages
 import com.drdisagree.teledrive.presentation.components.BottomBarSnackbarHost
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.files.FolderPickerHost
 import com.drdisagree.teledrive.resources.files_move_to
 import com.drdisagree.teledrive.resources.files_move_here
@@ -49,7 +50,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -84,6 +86,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -128,9 +132,12 @@ import com.drdisagree.teledrive.presentation.components.FileListItem
 import com.drdisagree.teledrive.presentation.components.LoadingState
 import com.drdisagree.teledrive.presentation.components.RenameDialog
 import com.drdisagree.teledrive.presentation.components.SortMenu
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
 import com.drdisagree.teledrive.presentation.components.pinchZoom
 import com.drdisagree.teledrive.presentation.components.rememberDragSelect
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.presentation.navigation.LocalBottomBarInset
 import com.drdisagree.teledrive.presentation.preview.PreviewSequence
@@ -147,7 +154,9 @@ private fun DayHeaderRow(dayStartMillis: Long, modifier: Modifier = Modifier) {
         },
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp)
+        modifier = modifier
+            .semantics { heading() }
+            .padding(start = 4.dp, top = 12.dp, bottom = 4.dp)
     )
 }
 
@@ -205,10 +214,14 @@ private fun AlbumGrid(
         )
         return
     }
+    val gridState = rememberLazyGridState()
+    val keyboard = rememberKeyboardCollection(gridState, columns)
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(columns),
         modifier = Modifier
             .fillMaxSize()
+            .keyboardCollection(keyboard, albums.size)
             .pinchZoom(onZoomIn = onZoomIn, onZoomOut = onZoomOut),
         contentPadding = PaddingValues(
             start = 12.dp,
@@ -219,11 +232,16 @@ private fun AlbumGrid(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(albums, key = { it.folderId ?: UNFILED_ALBUM_KEY }) { album ->
+        itemsIndexed(
+            albums,
+            key = { _, album -> album.folderId ?: UNFILED_ALBUM_KEY }
+        ) { index, album ->
             AlbumCard(
                 album = album,
                 onClick = { onOpenAlbum(album) },
-                modifier = Modifier.animateItem()
+                modifier = Modifier
+                    .keyboardCollectionItem(keyboard, index)
+                    .animateItem()
             )
         }
     }
@@ -587,6 +605,29 @@ fun GalleryScreen(
                 },
                 onEnd = viewModel::endRangeSelection
             )
+            val isMedia: (Int) -> Boolean = { index ->
+                index < media.itemCount && media.peek(index) is GalleryListItem.Media
+            }
+            val listKeyboard = rememberKeyboardCollection(mediaListState, isItem = isMedia)
+            val gridKeyboard = rememberKeyboardCollection(mediaGridState, state.gridSize, isMedia)
+            val selectIfNone: (Int) -> Unit = { index ->
+                if (!state.selectionMode) mediaIdAt(index)?.let(viewModel::toggleSelection)
+            }
+            val shortcuts = CollectionShortcuts(
+                onToggleSelect = { index -> mediaIdAt(index)?.let(viewModel::toggleSelection) },
+                onSelectAll = viewModel::selectAll,
+                onDelete = { index ->
+                    selectIfNone(index)
+                    if (viewModel.hasSelection()) confirmTrash = true
+                },
+                onRename = { index -> mediaIdAt(index)?.let(viewModel::requestRename) },
+                onCut = { index ->
+                    selectIfNone(index)
+                    viewModel.cutSelected()
+                },
+                onBack = onBack,
+                onClear = if (state.selectionMode) viewModel::clearSelection else null
+            )
             RefreshableContent(
                 isRefreshing = refreshing,
                 onRefresh = viewModel::refresh,
@@ -605,6 +646,7 @@ fun GalleryScreen(
                         state = mediaListState,
                         modifier = Modifier
                             .fillMaxSize()
+                            .keyboardCollection(listKeyboard, media.itemCount, shortcuts)
                             .pinchZoom(
                                 onZoomIn = viewModel::zoomIn,
                                 onZoomOut = viewModel::zoomOut
@@ -641,7 +683,9 @@ fun GalleryScreen(
                                             }
                                         },
                                         onLongClick = { viewModel.toggleSelection(file.id) },
-                                        modifier = Modifier.animateItem()
+                                        modifier = Modifier
+                                            .keyboardCollectionItem(listKeyboard, index)
+                                            .animateItem()
                                     )
                                 }
 
@@ -655,6 +699,7 @@ fun GalleryScreen(
                         columns = GridCells.Fixed(state.gridSize),
                         modifier = Modifier
                             .fillMaxSize()
+                            .keyboardCollection(gridKeyboard, media.itemCount, shortcuts)
                             .pinchZoom(
                                 onZoomIn = viewModel::zoomIn,
                                 onZoomOut = viewModel::zoomOut
@@ -700,7 +745,9 @@ fun GalleryScreen(
                                             }
                                         },
                                         onLongClick = { viewModel.toggleSelection(file.id) },
-                                        modifier = Modifier.animateItem()
+                                        modifier = Modifier
+                                            .keyboardCollectionItem(gridKeyboard, index)
+                                            .animateItem()
                                     )
                                 }
 

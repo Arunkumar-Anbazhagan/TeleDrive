@@ -351,6 +351,7 @@
     <string name="files_unhide">Unhide</string>
     <string name="files_copied_all">Copied %1$d</string>
     <string name="files_copied_partial">Copied %1$d of %2$d</string>
+    <string name="files_cut_count">Cut %1$d. Open a folder and press Ctrl+V to move them there</string>
     <string name="files_moving_to_trash">Moving %1$d to trash…</string>
     <string name="files_queued_for_download">%1$d queued for download</string>
     <string name="files_queued_for_upload">%1$d queued for upload</string>
@@ -514,12 +515,14 @@
 
     <!-- Trash -->
     <string name="trash">Trash</string>
+    <string name="trash_auto_clear_after_days">Items are deleted permanently after %1$d days.</string>
     <string name="trash_delete_permanently">Delete permanently?</string>
     <string name="trash_delete_selected_message">%1$d items, including everything inside any selected folder, will be permanently deleted from this device and from Telegram.</string>
     <string name="trash_empty">Trash is empty</string>
     <string name="trash_empty_trash_action">Empty trash</string>
     <string name="trash_empty_trash_title">Empty trash?</string>
     <string name="trash_items_permanently_deleted_device">All items will be permanently deleted from this device and Telegram. This cannot be undone.</string>
+    <string name="trash_kept_until_removed">Deleted items stay here until you remove them.</string>
     <string name="trash_restores_with_folder">Restores with the folder</string>
     <string name="trash_trashed_at">Trashed %1$s</string>
     <string name="trash_delete_partial">%1$d of %2$d could not be deleted</string>

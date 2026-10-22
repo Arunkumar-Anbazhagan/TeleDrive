@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,7 +42,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.collapse
+import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,28 +58,36 @@ import com.drdisagree.teledrive.presentation.common.Formatters
 import com.drdisagree.teledrive.presentation.common.add
 import com.drdisagree.teledrive.presentation.common.resolve
 import com.drdisagree.teledrive.presentation.components.BlockingProgressDialog
+import com.drdisagree.teledrive.presentation.components.CollectionShortcuts
 import com.drdisagree.teledrive.presentation.components.ConfirmDialog
 import com.drdisagree.teledrive.presentation.components.EmptyState
 import com.drdisagree.teledrive.presentation.components.FileThumbnail
+import com.drdisagree.teledrive.presentation.components.keyboardCollection
+import com.drdisagree.teledrive.presentation.components.keyboardCollectionItem
 import com.drdisagree.teledrive.presentation.components.liftedTopAppBarColors
 import com.drdisagree.teledrive.presentation.components.rememberDragSelect
+import com.drdisagree.teledrive.presentation.components.rememberKeyboardCollection
 import com.drdisagree.teledrive.presentation.components.rememberToolbarLift
 import com.drdisagree.teledrive.resources.Res
 import com.drdisagree.teledrive.resources.common_back
 import com.drdisagree.teledrive.resources.common_clear_selection
+import com.drdisagree.teledrive.resources.common_collapse
 import com.drdisagree.teledrive.resources.common_delete_forever
 import com.drdisagree.teledrive.resources.common_deselect_all
+import com.drdisagree.teledrive.resources.common_expand
 import com.drdisagree.teledrive.resources.common_restore
 import com.drdisagree.teledrive.resources.common_select
 import com.drdisagree.teledrive.resources.common_select_all
 import com.drdisagree.teledrive.resources.common_selection_count
 import com.drdisagree.teledrive.resources.trash
+import com.drdisagree.teledrive.resources.trash_auto_clear_after_days
 import com.drdisagree.teledrive.resources.trash_delete_permanently
 import com.drdisagree.teledrive.resources.trash_delete_selected_message
 import com.drdisagree.teledrive.resources.trash_empty
 import com.drdisagree.teledrive.resources.trash_empty_trash_action
 import com.drdisagree.teledrive.resources.trash_empty_trash_title
 import com.drdisagree.teledrive.resources.trash_items_permanently_deleted_device
+import com.drdisagree.teledrive.resources.trash_kept_until_removed
 import com.drdisagree.teledrive.resources.trash_restores_with_folder
 import com.drdisagree.teledrive.resources.trash_trashed_at
 import org.jetbrains.compose.resources.stringResource
@@ -114,6 +127,28 @@ fun TrashScreen(
             )
         },
         onEnd = viewModel::endRangeSelection
+    )
+    val keyboard = rememberKeyboardCollection(listState)
+    val selectableIdAt: (Int) -> String? = { index ->
+        state.rows.getOrNull(index)?.takeIf { it.selectable }?.item?.id
+    }
+    val shortcuts = CollectionShortcuts(
+        onToggleSelect = { index -> selectableIdAt(index)?.let(viewModel::toggleSelection) },
+        onSelectAll = viewModel::selectAll,
+        onDelete = { index ->
+            if (!state.selectionMode) selectableIdAt(index)?.let(viewModel::toggleSelection)
+            if (state.selectionMode || selectableIdAt(index) != null) confirmDeleteSelected = true
+        },
+        onExpand = { index ->
+            state.rows.getOrNull(index)?.takeIf { it.expandable && !it.expanded }
+                ?.let { viewModel.toggleExpanded(it.item.id) }
+        },
+        onCollapse = { index ->
+            state.rows.getOrNull(index)?.takeIf { it.expandable && it.expanded }
+                ?.let { viewModel.toggleExpanded(it.item.id) }
+        },
+        onBack = onBack,
+        onClear = if (state.selectionMode) viewModel::clearSelection else null
     )
 
     Scaffold(
@@ -197,9 +232,9 @@ fun TrashScreen(
                 icon = Icons.Outlined.Delete,
                 title = stringResource(Res.string.trash_empty),
                 description = if (state.autoClearDays > 0) {
-                    "Items are deleted permanently after ${state.autoClearDays} days."
+                    stringResource(Res.string.trash_auto_clear_after_days, state.autoClearDays)
                 } else {
-                    "Deleted items stay here until you remove them."
+                    stringResource(Res.string.trash_kept_until_removed)
                 },
                 modifier = Modifier.padding(padding)
             )
@@ -209,17 +244,21 @@ fun TrashScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .keyboardCollection(keyboard, state.rows.size, shortcuts)
                 .then(dragSelect),
             contentPadding = padding.add(horizontal = 12.dp, top = 12.dp, bottom = 12.dp)
         ) {
-            items(
+            itemsIndexed(
                 state.rows,
-                key = { it.key }
-            ) { row ->
+                key = { _, row -> row.key }
+            ) { index, row ->
                 val item = row.item
                 val selected = row.selectable && item.id in state.selection
+                val expandLabel = stringResource(Res.string.common_expand)
+                val collapseLabel = stringResource(Res.string.common_collapse)
                 Row(
                     modifier = Modifier
+                        .keyboardCollectionItem(keyboard, index)
                         .animateItem()
                         .fillMaxWidth()
                         .padding(start = (row.depth * 20).dp)
@@ -228,6 +267,22 @@ fun TrashScreen(
                             if (selected) MaterialTheme.colorScheme.secondaryContainer
                             else Color.Transparent
                         )
+                        .semantics {
+                            if (selected) this.selected = true
+                            if (row.expandable) {
+                                if (row.expanded) {
+                                    collapse(collapseLabel) {
+                                        viewModel.toggleExpanded(item.id)
+                                        true
+                                    }
+                                } else {
+                                    expand(expandLabel) {
+                                        viewModel.toggleExpanded(item.id)
+                                        true
+                                    }
+                                }
+                            }
+                        }
                         .combinedClickable(
                             onClick = {
                                 when {
@@ -286,18 +341,17 @@ fun TrashScreen(
                         )
                     }
                     if (row.expandable) {
-                        IconButton(onClick = { viewModel.toggleExpanded(item.id) }) {
+                        IconButton(
+                            onClick = { viewModel.toggleExpanded(item.id) },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 imageVector = if (row.expanded) {
                                     Icons.Filled.ExpandLess
                                 } else {
                                     Icons.Filled.ExpandMore
                                 },
-                                contentDescription = if (row.expanded) {
-                                    "Collapse ${item.name}"
-                                } else {
-                                    "Show contents of ${item.name}"
-                                }
+                                contentDescription = if (row.expanded) collapseLabel else expandLabel
                             )
                         }
                     }
