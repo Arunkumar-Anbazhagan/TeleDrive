@@ -83,7 +83,7 @@ jobs:
           key: vlc-natives-${{ hashFiles('desktop/build.gradle.kts') }}
 
       - name: Package installer
-        run: ./gradlew :desktop:packageMsi
+        run: ./gradlew :desktop:packageMsi -PciBuild
 
       - uses: actions/upload-artifact@v7
         with:

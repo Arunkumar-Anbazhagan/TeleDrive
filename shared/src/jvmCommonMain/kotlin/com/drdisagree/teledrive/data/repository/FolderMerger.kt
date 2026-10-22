@@ -1,7 +1,6 @@
 package com.drdisagree.teledrive.data.repository
 
 import com.drdisagree.teledrive.core.common.SafeLog
-import com.drdisagree.teledrive.core.publish.PublishScheduler
 import com.drdisagree.teledrive.data.local.dao.FileDao
 import com.drdisagree.teledrive.data.local.dao.FolderDao
 import com.drdisagree.teledrive.data.local.dao.FolderTombstoneDao
@@ -14,16 +13,12 @@ class FolderMerger(
     private val folderDao: FolderDao,
     private val fileDao: FileDao,
     private val tombstoneDao: FolderTombstoneDao,
-    private val publishScheduler: PublishScheduler,
     private val database: TeleDriveDatabase
 ) {
 
     suspend fun mergeDuplicates(chatId: Long): Int {
         val merged = database.inImmediateTransaction { mergeAll(chatId) }
-        if (merged > 0) {
-            SafeLog.d(TAG, "Merged $merged duplicate folders")
-            publishScheduler.kick()
-        }
+        if (merged > 0) SafeLog.d(TAG, "Merged $merged duplicate folders")
         return merged
     }
 

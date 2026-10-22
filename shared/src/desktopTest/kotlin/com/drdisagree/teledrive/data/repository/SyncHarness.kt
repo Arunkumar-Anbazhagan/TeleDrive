@@ -34,7 +34,6 @@ internal class SyncHarness : AutoCloseable {
         database.folderDao(),
         database.fileDao(),
         database.folderTombstoneDao(),
-        scheduler,
         database
     )
     val folderState = FolderStateSynchronizer(
