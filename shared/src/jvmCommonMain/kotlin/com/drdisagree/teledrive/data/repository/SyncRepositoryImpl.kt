@@ -439,12 +439,19 @@ class SyncRepositoryImpl(
         val laterPart = manifest != null && manifest.isPart && manifest.partIndex != 0
         if (laterPart && existing != null) return ReconcileResult.UNCHANGED
 
-        val local = existing?.takeIf {
-            it.pendingPublish && (manifest == null || it.modifiedAt >= manifest.modifiedAt)
-        }
+        val local = existing?.takeIf { it.pendingPublish }
+        val choice = FieldChoice(
+            local = local?.let { FileBase.of(it) },
+            remote = manifest?.let { FileBase.of(it) },
+            base = FileBase.fromText(existing?.remoteBase),
+            localIsNewer = local != null &&
+                    (manifest == null || local.modifiedAt >= manifest.modifiedAt)
+        )
 
         val folderId = when {
-            local != null -> local.folderId ?: local.preTrashFolderId
+            local != null && choice.keepsLocal { it.folderId } ->
+                local.folderId ?: local.preTrashFolderId
+
             manifest == null -> existing?.folderId
             laterPart -> manifest.folderId?.takeIf {
                 folderPathResolver.exists(it, document.chatId)
@@ -453,17 +460,20 @@ class SyncRepositoryImpl(
         }
         val folderTrashedAt = folderId?.let { folderDao.byId(it)?.trashedAt }
 
-        val name = local?.name ?: manifest?.name ?: existing?.name
-        ?: document.fileName.ifBlank { "file-${document.messageId}" }
+        val name = local?.name?.takeIf { choice.keepsLocal { it.name } }
+            ?: manifest?.name ?: existing?.name
+            ?: document.fileName.ifBlank { "file-${document.messageId}" }
         val mime = manifest?.mimeType ?: document.mimeType.ifBlank {
             MimeTypes.fromFileName(name)
         }
 
         val now = System.currentTimeMillis()
-        val trashedAt = if (local != null) {
-            local.trashedAt
-        } else {
-            manifest?.trashedAt ?: folderTrashedAt ?: existing?.trashedAt
+        val trashedAt = when {
+            local != null && choice.keepsLocal { it.trashedAt } -> local.trashedAt
+            manifest != null && choice.remoteChanged { it.trashedAt } ->
+                manifest.trashedAt ?: folderTrashedAt
+
+            else -> manifest?.trashedAt ?: folderTrashedAt ?: existing?.trashedAt
         }
         val entity = FileEntity(
             id = manifest?.fileId ?: existing?.id ?: UUID.randomUUID().toString(),
@@ -479,9 +489,12 @@ class SyncRepositoryImpl(
             remoteFileId = document.remoteFileId,
             remoteUniqueId = document.uniqueFileId,
             backupState = BackupState.BACKED_UP,
-            isHidden = local?.isHidden ?: manifest?.hidden ?: existing?.isHidden ?: false,
-            isArchived = local?.isArchived ?: manifest?.archived ?: existing?.isArchived ?: false,
-            isFavorite = local?.isFavorite ?: manifest?.favorite ?: existing?.isFavorite ?: false,
+            isHidden = local?.isHidden?.takeIf { choice.keepsLocal { it.hidden } }
+                ?: manifest?.hidden ?: existing?.isHidden ?: false,
+            isArchived = local?.isArchived?.takeIf { choice.keepsLocal { it.archived } }
+                ?: manifest?.archived ?: existing?.isArchived ?: false,
+            isFavorite = local?.isFavorite?.takeIf { choice.keepsLocal { it.favorite } }
+                ?: manifest?.favorite ?: existing?.isFavorite ?: false,
             isAvailableOffline = existing?.isAvailableOffline == true,
             isEncrypted = manifest?.encrypted
                 ?: manifestCodec.isEncryptedManifest(document.caption),
@@ -497,8 +510,10 @@ class SyncRepositoryImpl(
             pendingPublish = existing?.pendingPublish == true || queueCaptionRepair,
             createdAt = manifest?.createdAt ?: existing?.createdAt
             ?: (document.dateSeconds * 1000L),
-            modifiedAt = local?.modifiedAt ?: manifest?.modifiedAt ?: existing?.modifiedAt
-            ?: (document.dateSeconds * 1000L),
+            modifiedAt = maxOf(
+                local?.modifiedAt ?: Long.MIN_VALUE,
+                manifest?.modifiedAt ?: existing?.modifiedAt ?: (document.dateSeconds * 1000L)
+            ),
             addedAt = existing?.addedAt ?: now,
             partCount = damagedSplitCount ?: manifest?.partCount ?: existing?.partCount ?: 0,
             iconFileId = manifest?.iconFileId ?: existing?.iconFileId,
@@ -506,7 +521,8 @@ class SyncRepositoryImpl(
                 ExtraFields.toText(manifest.extra)
             } else {
                 existing?.manifestExtra
-            }
+            },
+            remoteBase = manifest?.let { FileBase.of(it).toText() } ?: existing?.remoteBase
         )
 
         if (laterPart) {

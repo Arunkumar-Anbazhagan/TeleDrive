@@ -24,6 +24,7 @@ import com.drdisagree.teledrive.data.local.entity.FileEntity
 import com.drdisagree.teledrive.data.local.entity.TransferEntity
 import com.drdisagree.teledrive.data.remote.telegram.ManifestCodec
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFileManifest
+import com.drdisagree.teledrive.data.repository.FileBase
 import com.drdisagree.teledrive.data.repository.FolderPathResolver
 import com.drdisagree.teledrive.domain.model.BackupState
 import com.drdisagree.teledrive.domain.model.TransferStage
@@ -229,6 +230,7 @@ class TransferExecutor(
                             state = BackupState.BACKED_UP,
                             iconFileId = iconFileId
                         )
+                        fileDao.setRemoteBase(entity.id, FileBase.of(manifest).toText())
                         if (transfer.type == TransferType.BACKUP) {
                             backupDao.upsertRecord(
                                 BackupRecordEntity(
@@ -350,6 +352,7 @@ class TransferExecutor(
                                 state = BackupState.BACKED_UP,
                                 iconFileId = manifest.iconFileId
                             )
+                            fileDao.setRemoteBase(entity.id, FileBase.of(manifest).toText())
                             if (transfer.type == TransferType.BACKUP) {
                                 backupDao.upsertRecord(
                                     BackupRecordEntity(

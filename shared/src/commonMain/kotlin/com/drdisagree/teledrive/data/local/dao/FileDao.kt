@@ -336,6 +336,9 @@ interface FileDao {
     )
     suspend fun detachRemote(id: String)
 
+    @Query("UPDATE files SET remoteBase = :remoteBase WHERE id = :id")
+    suspend fun setRemoteBase(id: String, remoteBase: String?)
+
     @Query("UPDATE files SET localPath = :localPath WHERE id = :id")
     suspend fun setLocalPath(id: String, localPath: String?)
 

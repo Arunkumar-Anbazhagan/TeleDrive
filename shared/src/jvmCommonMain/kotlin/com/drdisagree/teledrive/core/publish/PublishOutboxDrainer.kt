@@ -12,6 +12,7 @@ import com.drdisagree.teledrive.data.local.dao.PendingDeleteDao
 import com.drdisagree.teledrive.data.local.database.TeleDriveDatabase
 import com.drdisagree.teledrive.data.local.database.inImmediateTransaction
 import com.drdisagree.teledrive.data.local.entity.FileEntity
+import com.drdisagree.teledrive.data.repository.FileBase
 import com.drdisagree.teledrive.data.repository.FileManifestPublisher
 import com.drdisagree.teledrive.data.repository.FolderStateSynchronizer
 import kotlin.time.Duration.Companion.milliseconds
@@ -52,7 +53,7 @@ class PublishOutboxDrainer(
                 if (isStopped()) return false
                 when (val result = manifestPublisher.publish(entity)) {
                     is AppResult.Success -> {
-                        clearIfUnchanged(entity)
+                        clearIfUnchanged(entity, accepted = true)
                         onProgress(++published, published + fileDao.pendingPublishCount())
                     }
                     is AppResult.Failure -> {
@@ -67,7 +68,7 @@ class PublishOutboxDrainer(
                         }
                         if (!isPermanent(error)) return false
                         SafeLog.w(TAG, "Dropping unpublishable manifest: $error")
-                        clearIfUnchanged(entity)
+                        clearIfUnchanged(entity, accepted = false)
                         onProgress(++published, published + fileDao.pendingPublishCount())
                     }
                 }
@@ -104,10 +105,17 @@ class PublishOutboxDrainer(
         return true
     }
 
-    private suspend fun clearIfUnchanged(published: FileEntity) {
+    private suspend fun clearIfUnchanged(published: FileEntity, accepted: Boolean) {
         database.inImmediateTransaction {
             val current = fileDao.byId(published.id) ?: return@inImmediateTransaction
-            if (current.copy(pendingPublish = published.pendingPublish) == published) {
+            if (accepted && published.messageId != null) {
+                fileDao.setRemoteBase(published.id, FileBase.of(published).toText())
+            }
+            val unchanged = current.copy(
+                pendingPublish = published.pendingPublish,
+                remoteBase = published.remoteBase
+            ) == published
+            if (unchanged) {
                 fileDao.clearPendingPublish(published.id)
             }
         }

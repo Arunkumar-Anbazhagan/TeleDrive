@@ -59,5 +59,6 @@ data class FileEntity(
     val createdAt: Long,
     val modifiedAt: Long,
     val addedAt: Long,
-    val manifestExtra: String? = null
+    val manifestExtra: String? = null,
+    val remoteBase: String? = null
 )
