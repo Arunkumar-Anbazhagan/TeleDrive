@@ -42,11 +42,19 @@ class FolderStateSynchronizer(
 
     private val mutex = Mutex()
 
+    @Volatile
+    var indexMessageId: Long? = null
+        private set
+
     /**
      * A document unreadable without the content key is replaced, since waiting for that key would
      * block every folder change.
      */
-    suspend fun push() = mutex.withLock {
+    suspend fun push() = mutex.withLock { publish(pointIndexAt = null) }
+
+    suspend fun pointIndexAt(messageId: Long) = mutex.withLock { publish(pointIndexAt = messageId) }
+
+    private suspend fun publish(pointIndexAt: Long?) {
         val chatId = storageChatId()
         val existing = findStateDocuments(chatId)
         var remote: RemoteFolderState? = null
@@ -57,7 +65,10 @@ class FolderStateSynchronizer(
                 RemoteFolderRead.Unavailable -> error("Folder state download failed")
             }
         }
-        val state = merged(chatId, remote).copy(extra = remote?.extra.orEmpty())
+        val state = merged(chatId, remote).copy(
+            indexMessageId = pointIndexAt ?: remote?.indexMessageId,
+            extra = remote?.extra.orEmpty()
+        )
         applyLocally(chatId, state)
 
         val staging = File(storagePaths.cacheDir, RemoteFolderState.FILE_NAME)
@@ -83,6 +94,7 @@ class FolderStateSynchronizer(
             staging.delete()
         }
         tombstoneDao.deleteOlderThan(deletionCutoff())
+        indexMessageId = state.indexMessageId
     }
 
     /**
@@ -116,7 +128,9 @@ class FolderStateSynchronizer(
             val read = read(document) as? RemoteFolderRead.Ok ?: continue
             remote = combined(remote, read.state)
         }
-        applyLocally(chatId, merged(chatId, remote ?: return@withLock 0))
+        val found = remote ?: return@withLock 0
+        indexMessageId = found.indexMessageId
+        applyLocally(chatId, merged(chatId, found))
     }
 
     private suspend fun read(document: RemoteDocument): RemoteFolderRead {
@@ -140,7 +154,10 @@ class FolderStateSynchronizer(
                 localDeleted = first.deleted,
                 remote = next,
                 keepDeletionsSince = deletionCutoff()
-            ).copy(extra = next.extra + first.extra)
+            ).copy(
+                indexMessageId = listOfNotNull(first.indexMessageId, next.indexMessageId).maxOrNull(),
+                extra = next.extra + first.extra
+            )
         }
 
     private suspend fun merged(chatId: Long, remote: RemoteFolderState?): RemoteFolderState =

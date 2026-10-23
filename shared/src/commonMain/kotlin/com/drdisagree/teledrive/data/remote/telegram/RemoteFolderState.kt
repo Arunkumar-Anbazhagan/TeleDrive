@@ -14,6 +14,7 @@ data class RemoteFolderState(
     @SerialName("v") val version: Int = VERSION,
     @SerialName("f") val folders: List<RemoteFolderEntry> = emptyList(),
     @SerialName("d") val deleted: List<RemoteFolderTombstone> = emptyList(),
+    @SerialName("ix") val indexMessageId: Long? = null,
     @Transient val extra: Map<String, JsonElement> = emptyMap()
 ) {
 

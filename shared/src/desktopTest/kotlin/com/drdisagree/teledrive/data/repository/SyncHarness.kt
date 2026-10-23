@@ -46,6 +46,7 @@ internal class SyncHarness : AutoCloseable {
         unused<WrappedKeyRepository>(),
         folderMerger
     )
+    val indexSnapshot = IndexSnapshot(storagePaths, telegram, folderState)
 
     fun newSync() = SyncRepositoryImpl(
         telegramClient = telegram,
@@ -63,6 +64,7 @@ internal class SyncHarness : AutoCloseable {
         ),
         folderStateSynchronizer = folderState,
         folderMerger = folderMerger,
+        indexSnapshot = indexSnapshot,
         publishScheduler = scheduler,
         settingsRepository = settings,
         database = database

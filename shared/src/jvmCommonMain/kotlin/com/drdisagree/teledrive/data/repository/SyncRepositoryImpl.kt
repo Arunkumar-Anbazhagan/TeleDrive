@@ -19,6 +19,7 @@ import com.drdisagree.teledrive.data.local.database.inImmediateTransaction
 import com.drdisagree.teledrive.data.local.entity.FileEntity
 import com.drdisagree.teledrive.data.local.entity.FilePartEntity
 import com.drdisagree.teledrive.data.remote.telegram.ExtraFields
+import com.drdisagree.teledrive.data.remote.telegram.IndexSnapshotFile
 import com.drdisagree.teledrive.data.remote.telegram.ManifestCodec
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFileManifest
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderState
@@ -56,6 +57,7 @@ class SyncRepositoryImpl(
     private val channelOwnership: ChannelOwnership,
     private val folderStateSynchronizer: FolderStateSynchronizer,
     private val folderMerger: FolderMerger,
+    private val indexSnapshot: IndexSnapshot,
     private val publishScheduler: PublishScheduler,
     private val settingsRepository: SettingsRepository,
     private val database: TeleDriveDatabase
@@ -133,12 +135,14 @@ class SyncRepositoryImpl(
             settingsRepository.update { it.copy(storageChatId = chatId) }
         }
 
+        var fromSnapshot = 0
         if (!incremental) {
             if (folderDao.pendingPublishCount() > 0) publishScheduler.kick()
             runCatching { folderStateSynchronizer.pull() }
                 .onFailure { SafeLog.w(TAG, "Folder state pull failed", it) }
             folderMerger.mergeDuplicates(chatId)
             if (folderDao.pendingPublishCount() > 0) publishScheduler.kick()
+            if (fileDao.fileCount(chatId) == 0) fromSnapshot = applySnapshot(chatId, quiet)
         }
 
         val pendingDeletes = pendingDeleteDao.messageIdsIn(chatId).toSet()
@@ -149,11 +153,13 @@ class SyncRepositoryImpl(
         }
         val folderCache = mutableMapOf<String, String?>()
         SafeLog.d(TAG, "Sync start chat=$chatId incremental=$incremental")
-        var inserted = 0
+        var inserted = fromSnapshot
         var updated = 0
         var locked = 0
         val repairsBefore = captionRepairsQueued.size
         val seenMessageIds = mutableSetOf<Long>()
+        val channelDocuments = mutableListOf<RemoteDocument>()
+        val snapshots = mutableListOf<RemoteDocument>()
         var fromMessageId = 0L
         var pages = 0
 
@@ -177,7 +183,9 @@ class SyncRepositoryImpl(
                     seenMessageIds.add(document.messageId)
                     // Still in the chat, but a delete is owed for it.
                     if (document.messageId in pendingDeletes) continue
+                    if (indexSnapshot.isSnapshot(document)) snapshots += document
                     if (isInternalDocument(document)) continue
+                    channelDocuments += document
                     if (manifestCodec.isLocked(document.caption)) {
                         locked++
                         continue
@@ -209,10 +217,39 @@ class SyncRepositoryImpl(
         }
 
         if (captionRepairsQueued.size > repairsBefore) publishScheduler.kick()
-        return finishSync(
+        val result = finishSync(
             chatId, seenMessageIds, mappedBeforeScan, inserted, updated, locked,
             partial = incremental
         )
+        if (!incremental) {
+            runCatching { indexSnapshot.refresh(chatId, channelDocuments, snapshots) }
+                .onFailure { SafeLog.w(TAG, "Index snapshot refresh failed", it) }
+        }
+        return result
+    }
+
+    private suspend fun applySnapshot(chatId: Long, quiet: Boolean): Int {
+        val documents = runCatching { indexSnapshot.load(chatId) }
+            .onFailure { SafeLog.w(TAG, "Index snapshot load failed", it) }
+            .getOrNull()
+            .orEmpty()
+            .filter { !isInternalDocument(it) && !manifestCodec.isLocked(it.caption) }
+        if (documents.isEmpty()) return 0
+        val folderCache = mutableMapOf<String, String?>()
+        var inserted = 0
+        documents.sortedByDescending { it.messageId }.chunked(PAGE_SIZE).forEach { page ->
+            val known = existingForPage(page)
+            database.inImmediateTransaction {
+                for (document in page) {
+                    if (reconcile(document, folderCache, known) == ReconcileResult.INSERTED) {
+                        inserted++
+                    }
+                }
+            }
+            if (!quiet) _indexedSoFar.value = inserted
+        }
+        SafeLog.d(TAG, "Index snapshot added $inserted files")
+        return inserted
     }
 
     private suspend fun finishSync(
@@ -315,7 +352,9 @@ class SyncRepositoryImpl(
     private fun isInternalDocument(document: RemoteDocument): Boolean =
         document.fileName == RemoteFolderState.FILE_NAME ||
                 document.fileName == KeyBackupCodec.BACKUP_FILE_NAME ||
+                document.fileName == IndexSnapshotFile.FILE_NAME ||
                 document.caption.startsWith(RemoteFolderState.MARKER) ||
+                document.caption.startsWith(IndexSnapshotFile.MARKER) ||
                 document.caption.startsWith(KEY_BACKUP_MARKER) ||
                 document.caption.startsWith(ICON_MARKER)
 

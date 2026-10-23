@@ -25,6 +25,7 @@ val repositoryModule = module {
     singleOf(::FileManifestPublisher)
     singleOf(::FolderPathResolver)
     singleOf(::FolderMerger)
+    singleOf(::IndexSnapshot)
     singleOf(::FolderStateSynchronizer)
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::FileRepositoryImpl) bind FileRepository::class

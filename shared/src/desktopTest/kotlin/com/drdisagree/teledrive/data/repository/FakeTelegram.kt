@@ -6,6 +6,7 @@ import com.drdisagree.teledrive.core.telegram.RemoteDocumentPage
 import com.drdisagree.teledrive.core.telegram.TelegramClient
 import com.drdisagree.teledrive.core.telegram.TelegramDownloadEvent
 import com.drdisagree.teledrive.core.telegram.TelegramUploadEvent
+import com.drdisagree.teledrive.data.remote.telegram.IndexSnapshotFile
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderState
 import com.drdisagree.teledrive.testing.unused
 import java.io.File
@@ -24,6 +25,7 @@ internal class FakeTelegram : TelegramClient by unused() {
     var openedChats = 0
     var closedChats = 0
     private var nextMessageId = 2_000_000L
+    var uploadDateSeconds = 100
     var onFetch: suspend (fromMessageId: Long) -> Unit = {}
     private val stateFiles = mutableListOf<File>()
     private var folderStateDocument: RemoteDocument? = null
@@ -114,10 +116,15 @@ internal class FakeTelegram : TelegramClient by unused() {
             mimeType = mimeType,
             sizeBytes = content.length.toLong(),
             caption = caption,
-            dateSeconds = 100
+            dateSeconds = uploadDateSeconds
         )
         if (fileName == RemoteFolderState.FILE_NAME) {
             publishRawFolderState(content, messageId)
+        }
+        if (fileName == IndexSnapshotFile.FILE_NAME) {
+            val copy = File.createTempFile("index", ".gz").also { stateFiles += it }
+            File(localPath).copyTo(copy, overwrite = true)
+            storedFiles[uploaded] = copy
         }
         return flowOf(TelegramUploadEvent.Completed(uploaded))
     }
@@ -128,7 +135,8 @@ internal class FakeTelegram : TelegramClient by unused() {
     }
 
     override suspend fun getDocument(chatId: Long, messageId: Long): RemoteDocument? =
-        (documents + listOfNotNull(folderStateDocument)).firstOrNull { it.messageId == messageId }
+        (documents + listOfNotNull(folderStateDocument) + storedFiles.keys)
+            .firstOrNull { it.messageId == messageId }
 
     override fun messageChanges(chatId: Long): Flow<MessageChange> = changes
 
