@@ -9,15 +9,18 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.drdisagree.teledrive.R
 import com.drdisagree.teledrive.core.common.AppNotifications
+import com.drdisagree.teledrive.core.telegram.TelegramSession
 
 class PublishOutboxWorker(
     appContext: Context,
     params: WorkerParameters,
     private val drainer: PublishOutboxDrainer,
-    private val appNotifications: AppNotifications
+    private val appNotifications: AppNotifications,
+    private val telegramSession: TelegramSession
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        if (!telegramSession.ensureReady()) return Result.retry()
         var channelsReady = false
         var lastPublished = 0
         var lastTotal = 0

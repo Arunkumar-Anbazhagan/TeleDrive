@@ -10,6 +10,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.drdisagree.teledrive.R
 import com.drdisagree.teledrive.core.common.AppNotifications
+import com.drdisagree.teledrive.core.telegram.TelegramSession
 import com.drdisagree.teledrive.data.local.dao.TransferDao
 import com.drdisagree.teledrive.data.local.entity.TransferEntity
 import com.drdisagree.teledrive.domain.model.TransferState
@@ -29,11 +30,13 @@ class TransferQueueWorker(
     private val drainer: TransferQueueDrainer,
     private val settingsRepository: SettingsRepository,
     private val appNotifications: AppNotifications,
-    private val transferDao: TransferDao
+    private val transferDao: TransferDao,
+    private val telegramSession: TelegramSession
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         if (!drainer.hasRunnableWork()) return Result.success()
+        if (!telegramSession.ensureReady()) return Result.retry()
         appNotifications.createChannels()
         runCatching { setForeground(getForegroundInfo()) }
 
