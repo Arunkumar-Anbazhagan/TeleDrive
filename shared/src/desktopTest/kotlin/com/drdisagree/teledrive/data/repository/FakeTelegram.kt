@@ -28,6 +28,7 @@ internal class FakeTelegram : TelegramClient by unused() {
     private val stateFiles = mutableListOf<File>()
     private var folderStateDocument: RemoteDocument? = null
     private var folderStateFile: File? = null
+    private val storedFiles = mutableMapOf<RemoteDocument, File>()
 
     fun publishFolderState(state: RemoteFolderState, messageId: Long = 1_000_000) {
         val file = File.createTempFile("folders", ".json").also { stateFiles += it }
@@ -46,6 +47,24 @@ internal class FakeTelegram : TelegramClient by unused() {
         )
     }
 
+    fun addOlderFolderState(json: String, messageId: Long, dateSeconds: Int) {
+        val file = File.createTempFile("folders", ".json").also { stateFiles += it }
+        file.writeText(json)
+        storedFiles[
+            RemoteDocument(
+                chatId = TEST_CHAT,
+                messageId = messageId,
+                remoteFileId = "folder-state-$messageId",
+                uniqueFileId = "folder-state-$messageId",
+                fileName = RemoteFolderState.FILE_NAME,
+                mimeType = "application/json",
+                sizeBytes = file.length(),
+                caption = RemoteFolderState.MARKER,
+                dateSeconds = dateSeconds
+            )
+        ] = file
+    }
+
     fun publishRawFolderState(json: String, messageId: Long = 1_000_000) {
         publishFolderState(RemoteFolderState(), messageId)
         folderStateFile!!.writeText(json)
@@ -59,7 +78,7 @@ internal class FakeTelegram : TelegramClient by unused() {
         limit: Int
     ): RemoteDocumentPage {
         onFetch(fromMessageId)
-        val newestFirst = (documents + listOfNotNull(folderStateDocument))
+        val newestFirst = (documents + listOfNotNull(folderStateDocument) + storedFiles.keys)
             .sortedByDescending { it.messageId }
             .filter { fromMessageId == 0L || it.messageId < fromMessageId }
             .take(limit)
@@ -86,28 +105,26 @@ internal class FakeTelegram : TelegramClient by unused() {
         val content = File(localPath).readText()
         uploads += fileName to content
         val messageId = nextMessageId++
+        val uploaded = RemoteDocument(
+            chatId = chatId,
+            messageId = messageId,
+            remoteFileId = "uploaded-$messageId",
+            uniqueFileId = "uploaded-unique-$messageId",
+            fileName = fileName,
+            mimeType = mimeType,
+            sizeBytes = content.length.toLong(),
+            caption = caption,
+            dateSeconds = 100
+        )
         if (fileName == RemoteFolderState.FILE_NAME) {
             publishRawFolderState(content, messageId)
         }
-        return flowOf(
-            TelegramUploadEvent.Completed(
-                RemoteDocument(
-                    chatId = chatId,
-                    messageId = messageId,
-                    remoteFileId = "uploaded-$messageId",
-                    uniqueFileId = "uploaded-unique-$messageId",
-                    fileName = fileName,
-                    mimeType = mimeType,
-                    sizeBytes = content.length.toLong(),
-                    caption = caption,
-                    dateSeconds = 100
-                )
-            )
-        )
+        return flowOf(TelegramUploadEvent.Completed(uploaded))
     }
 
     override suspend fun deleteMessages(chatId: Long, messageIds: List<Long>) {
         deletedMessages += messageIds
+        storedFiles.keys.removeAll { it.messageId in messageIds }
     }
 
     override suspend fun getDocument(chatId: Long, messageId: Long): RemoteDocument? =
@@ -125,7 +142,9 @@ internal class FakeTelegram : TelegramClient by unused() {
 
     override fun downloadDocument(remoteFileId: String): Flow<TelegramDownloadEvent> {
         if (failDownloads) return flowOf()
-        val file = folderStateFile ?: return flowOf()
+        val file = storedFiles.entries.firstOrNull { it.key.remoteFileId == remoteFileId }?.value
+            ?: folderStateFile
+            ?: return flowOf()
         return flowOf(TelegramDownloadEvent.Completed(file.absolutePath, file.length()))
     }
 

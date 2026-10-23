@@ -48,14 +48,12 @@ class FolderStateSynchronizer(
      */
     suspend fun push() = mutex.withLock {
         val chatId = storageChatId()
-        val existing = findStateDocument(chatId)
-        val remote = existing?.let { document ->
+        val existing = findStateDocuments(chatId)
+        var remote: RemoteFolderState? = null
+        for (document in existing) {
             when (val read = read(document)) {
-                is RemoteFolderRead.Ok -> read.state
-                RemoteFolderRead.Unreadable -> {
-                    SafeLog.w(TAG, "Folder state unreadable, replacing it")
-                    null
-                }
+                is RemoteFolderRead.Ok -> remote = combined(remote, read.state)
+                RemoteFolderRead.Unreadable -> SafeLog.w(TAG, "Folder state unreadable, replacing it")
                 RemoteFolderRead.Unavailable -> error("Folder state download failed")
             }
         }
@@ -78,7 +76,9 @@ class FolderStateSynchronizer(
             ).collect { event ->
                 if (event is TelegramUploadEvent.Completed) Unit
             }
-            existing?.let { telegramClient.deleteMessages(chatId, listOf(it.messageId)) }
+            if (existing.isNotEmpty()) {
+                telegramClient.deleteMessages(chatId, existing.map { it.messageId })
+            }
         } finally {
             staging.delete()
         }
@@ -111,9 +111,12 @@ class FolderStateSynchronizer(
     suspend fun pull(): Int = mutex.withLock {
         if (folderDao.pendingPublishCount() > 0) return@withLock 0
         val chatId = storageChatId()
-        val document = findStateDocument(chatId) ?: return@withLock 0
-        val remote = (read(document) as? RemoteFolderRead.Ok)?.state ?: return@withLock 0
-        applyLocally(chatId, merged(chatId, remote))
+        var remote: RemoteFolderState? = null
+        for (document in findStateDocuments(chatId)) {
+            val read = read(document) as? RemoteFolderRead.Ok ?: continue
+            remote = combined(remote, read.state)
+        }
+        applyLocally(chatId, merged(chatId, remote ?: return@withLock 0))
     }
 
     private suspend fun read(document: RemoteDocument): RemoteFolderRead {
@@ -127,6 +130,18 @@ class FolderStateSynchronizer(
         return runCatching { FolderStateCodec.decode(payload) }
             .fold({ RemoteFolderRead.Ok(it) }, { RemoteFolderRead.Unreadable })
     }
+
+    private fun combined(first: RemoteFolderState?, next: RemoteFolderState): RemoteFolderState =
+        if (first == null) {
+            next
+        } else {
+            FolderStateMerge.merge(
+                local = first.folders,
+                localDeleted = first.deleted,
+                remote = next,
+                keepDeletionsSince = deletionCutoff()
+            ).copy(extra = next.extra + first.extra)
+        }
 
     private suspend fun merged(chatId: Long, remote: RemoteFolderState?): RemoteFolderState =
         FolderStateMerge.merge(
@@ -247,24 +262,30 @@ class FolderStateSynchronizer(
         return depth
     }
 
-    private suspend fun findStateDocument(chatId: Long): RemoteDocument? {
+    private suspend fun findStateDocuments(chatId: Long): List<RemoteDocument> {
+        val found = mutableListOf<RemoteDocument>()
         var fromMessageId = 0L
         var pages = 0
+        var pagesAfterFirst = 0
         while (pages++ < MAX_PAGES) {
             val page = try {
                 telegramClient.fetchDocuments(chatId, fromMessageId, PAGE_SIZE)
             } catch (e: TelegramException) {
                 SafeLog.w(TAG, "Folder state lookup failed: ${e.code}")
-                return null
+                break
             }
-            page.documents.firstOrNull {
+            found += page.documents.filter {
                 it.fileName == RemoteFolderState.FILE_NAME ||
                         it.caption.startsWith(RemoteFolderState.MARKER)
-            }?.let { return it }
-            if (page.nextFromMessageId == 0L) return null
+            }
+            if (found.isNotEmpty() && pagesAfterFirst++ >= EXTRA_PAGES) break
+            if (page.nextFromMessageId == 0L) break
             fromMessageId = page.nextFromMessageId
         }
-        return null
+        val newest = found.maxByOrNull { it.messageId } ?: return emptyList()
+        return found
+            .filter { newest.dateSeconds - it.dateSeconds <= SAME_BURST_SECONDS }
+            .sortedByDescending { it.messageId }
     }
 
     private suspend fun storageChatId(): Long {
@@ -282,6 +303,8 @@ class FolderStateSynchronizer(
         private const val PAGE_SIZE = 100
         private const val MAX_PAGES = 200
         private const val MAX_DEPTH = 64
+        private const val EXTRA_PAGES = 1
+        private const val SAME_BURST_SECONDS = 600
         private const val DELETION_RETENTION_MS = 180L * 24 * 60 * 60 * 1000
     }
 }
