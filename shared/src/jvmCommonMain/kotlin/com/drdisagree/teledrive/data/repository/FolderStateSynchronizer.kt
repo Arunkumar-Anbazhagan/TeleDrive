@@ -14,6 +14,8 @@ import com.drdisagree.teledrive.data.local.dao.FolderDao
 import com.drdisagree.teledrive.data.local.dao.FolderTombstoneDao
 import com.drdisagree.teledrive.data.local.entity.FolderEntity
 import com.drdisagree.teledrive.data.local.entity.FolderTombstoneEntity
+import com.drdisagree.teledrive.data.remote.telegram.ExtraFields
+import com.drdisagree.teledrive.data.remote.telegram.FolderStateCodec
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderEntry
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderState
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderTombstone
@@ -22,7 +24,6 @@ import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.json.Json
 
 /**
  * File captions only carry a folder path, so this document keeps empty folders, ids and flags
@@ -39,7 +40,6 @@ class FolderStateSynchronizer(
     private val folderMerger: FolderMerger
 ) {
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
     private val mutex = Mutex()
 
     /**
@@ -59,12 +59,11 @@ class FolderStateSynchronizer(
                 RemoteFolderRead.Unavailable -> error("Folder state download failed")
             }
         }
-        val state = merged(chatId, remote)
+        val state = merged(chatId, remote).copy(extra = remote?.extra.orEmpty())
         applyLocally(chatId, state)
 
         val staging = File(storagePaths.cacheDir, RemoteFolderState.FILE_NAME)
-        val payload = json.encodeToString(RemoteFolderState.serializer(), state)
-            .toByteArray(Charsets.UTF_8)
+        val payload = FolderStateCodec.encode(state).toByteArray(Charsets.UTF_8)
         val prefs = settingsRepository.preferences.first()
         staging.writeBytes(
             if (prefs.encryptFiles && prefs.keyBackupCreated) seal(payload) else payload
@@ -125,7 +124,7 @@ class FolderStateSynchronizer(
         val blob = localPath?.let(::File)?.takeIf { it.exists() }?.readBytes()
             ?: return RemoteFolderRead.Unavailable
         val payload = unseal(blob) ?: return RemoteFolderRead.Unreadable
-        return runCatching { json.decodeFromString(RemoteFolderState.serializer(), payload) }
+        return runCatching { FolderStateCodec.decode(payload) }
             .fold({ RemoteFolderRead.Ok(it) }, { RemoteFolderRead.Unreadable })
     }
 
@@ -170,7 +169,8 @@ class FolderStateSynchronizer(
                 pendingPublish = existing?.pendingPublish == true,
                 createdAt = entry.createdAt,
                 modifiedAt = entry.modifiedAt,
-                changedAt = entry.clock
+                changedAt = entry.clock,
+                extra = ExtraFields.toText(entry.extra)
             )
             if (existing == null) {
                 folderDao.upsert(row)
@@ -229,7 +229,8 @@ class FolderStateSynchronizer(
         preTrashParentId = preTrashParentId,
         createdAt = createdAt,
         modifiedAt = modifiedAt,
-        changedAt = changedAt
+        changedAt = changedAt,
+        extra = ExtraFields.fromText(extra)
     )
 
     private fun depthOf(

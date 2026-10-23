@@ -2,6 +2,8 @@ package com.drdisagree.teledrive.data.remote.telegram
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.JsonElement
 
 /**
  * File manifests only carry a folder path, so this keeps empty folders, folder ids and flags across
@@ -11,7 +13,8 @@ import kotlinx.serialization.Serializable
 data class RemoteFolderState(
     @SerialName("v") val version: Int = VERSION,
     @SerialName("f") val folders: List<RemoteFolderEntry> = emptyList(),
-    @SerialName("d") val deleted: List<RemoteFolderTombstone> = emptyList()
+    @SerialName("d") val deleted: List<RemoteFolderTombstone> = emptyList(),
+    @Transient val extra: Map<String, JsonElement> = emptyMap()
 ) {
 
     companion object {

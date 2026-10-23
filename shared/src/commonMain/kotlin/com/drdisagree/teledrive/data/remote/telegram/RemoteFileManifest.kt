@@ -2,6 +2,8 @@ package com.drdisagree.teledrive.data.remote.telegram
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.JsonElement
 
 /**
  * Keys are shortened to fit the caption limit; the captions alone can rebuild the local database.
@@ -30,7 +32,8 @@ data class RemoteFileManifest(
     @SerialName("pi") val partIndex: Int = 0,
     @SerialName("po") val partOffset: Long = 0,
     @SerialName("ps") val partSize: Long = 0,
-    @SerialName("icon") val iconFileId: String? = null
+    @SerialName("icon") val iconFileId: String? = null,
+    @Transient val extra: Map<String, JsonElement> = emptyMap()
 ) {
     val isPart: Boolean get() = partCount > 1
 

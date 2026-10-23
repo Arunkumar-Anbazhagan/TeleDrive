@@ -7,6 +7,7 @@ import com.drdisagree.teledrive.core.telegram.TelegramException
 import com.drdisagree.teledrive.core.transfer.FileParts
 import com.drdisagree.teledrive.data.local.dao.FilePartDao
 import com.drdisagree.teledrive.data.local.entity.FileEntity
+import com.drdisagree.teledrive.data.remote.telegram.ExtraFields
 import com.drdisagree.teledrive.data.remote.telegram.ManifestCodec
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFileManifest
 
@@ -39,7 +40,8 @@ class FileManifestPublisher(
             width = entity.width,
             height = entity.height,
             durationMs = entity.durationMs,
-            iconFileId = entity.iconFileId
+            iconFileId = entity.iconFileId,
+            extra = ExtraFields.fromText(entity.manifestExtra)
         )
         val partCount = maxOf(filePartDao.countOf(entity.id), entity.partCount)
         val manifest = if (partCount > 1) {

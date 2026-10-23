@@ -31,5 +31,6 @@ data class FolderEntity(
     val pendingPublish: Boolean = false,
     val createdAt: Long,
     val modifiedAt: Long,
-    val changedAt: Long = 0
+    val changedAt: Long = 0,
+    val extra: String? = null
 )

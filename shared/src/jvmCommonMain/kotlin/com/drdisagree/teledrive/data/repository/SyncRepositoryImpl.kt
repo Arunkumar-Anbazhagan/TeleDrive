@@ -18,6 +18,7 @@ import com.drdisagree.teledrive.data.local.database.TeleDriveDatabase
 import com.drdisagree.teledrive.data.local.database.inImmediateTransaction
 import com.drdisagree.teledrive.data.local.entity.FileEntity
 import com.drdisagree.teledrive.data.local.entity.FilePartEntity
+import com.drdisagree.teledrive.data.remote.telegram.ExtraFields
 import com.drdisagree.teledrive.data.remote.telegram.ManifestCodec
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFileManifest
 import com.drdisagree.teledrive.data.remote.telegram.RemoteFolderState
@@ -500,7 +501,12 @@ class SyncRepositoryImpl(
             ?: (document.dateSeconds * 1000L),
             addedAt = existing?.addedAt ?: now,
             partCount = damagedSplitCount ?: manifest?.partCount ?: existing?.partCount ?: 0,
-            iconFileId = manifest?.iconFileId ?: existing?.iconFileId
+            iconFileId = manifest?.iconFileId ?: existing?.iconFileId,
+            manifestExtra = if (manifest != null) {
+                ExtraFields.toText(manifest.extra)
+            } else {
+                existing?.manifestExtra
+            }
         )
 
         if (laterPart) {

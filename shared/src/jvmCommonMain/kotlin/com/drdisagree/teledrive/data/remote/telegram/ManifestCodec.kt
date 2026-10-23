@@ -5,6 +5,8 @@ import com.drdisagree.teledrive.core.crypto.CryptoKeys
 import com.drdisagree.teledrive.core.crypto.StreamCrypto
 import com.drdisagree.teledrive.core.crypto.WrappedKeyRepository
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Captions are "td1:" plus JSON, or "tde1:" plus base64 AES-GCM of it, so a leak reveals nothing
@@ -21,7 +23,11 @@ class ManifestCodec(
     }
 
     fun encode(manifest: RemoteFileManifest, encrypt: Boolean): String {
-        val payload = json.encodeToString(RemoteFileManifest.serializer(), manifest)
+        val fields = json.encodeToJsonElement(RemoteFileManifest.serializer(), manifest).jsonObject
+        val payload = json.encodeToString(
+            JsonObject.serializer(),
+            ExtraFields.appendTo(fields, manifest.extra)
+        )
         return if (encrypt) {
             val key = wrappedKeyRepository.getOrCreate(CryptoKeys.CONTENT)
             PREFIX_ENCRYPTED + Base64.encode(
@@ -34,11 +40,7 @@ class ManifestCodec(
 
     fun decode(caption: String): RemoteFileManifest? = runCatching {
         when {
-            caption.startsWith(PREFIX_PLAIN) ->
-                json.decodeFromString(
-                    RemoteFileManifest.serializer(),
-                    caption.removePrefix(PREFIX_PLAIN)
-                )
+            caption.startsWith(PREFIX_PLAIN) -> parse(caption.removePrefix(PREFIX_PLAIN))
 
             caption.startsWith(PREFIX_ENCRYPTED) -> {
                 val key = wrappedKeyRepository.get(CryptoKeys.CONTENT) ?: return null
@@ -46,15 +48,19 @@ class ManifestCodec(
                     key,
                     Base64.decode(caption.removePrefix(PREFIX_ENCRYPTED))
                 )
-                json.decodeFromString(
-                    RemoteFileManifest.serializer(),
-                    String(plaintext, Charsets.UTF_8)
-                )
+                parse(String(plaintext, Charsets.UTF_8))
             }
 
             else -> null
         }
     }.getOrNull()
+
+    private fun parse(payload: String): RemoteFileManifest {
+        val fields = json.parseToJsonElement(payload).jsonObject
+        return json.decodeFromJsonElement(RemoteFileManifest.serializer(), fields).copy(
+            extra = ExtraFields.unknownIn(fields, RemoteFileManifest.serializer().descriptor)
+        )
+    }
 
     fun isEncryptedManifest(caption: String): Boolean = caption.startsWith(PREFIX_ENCRYPTED)
 
