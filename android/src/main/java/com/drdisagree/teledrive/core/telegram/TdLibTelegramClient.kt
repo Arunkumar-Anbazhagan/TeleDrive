@@ -1072,6 +1072,14 @@ class TdLibTelegramClient(
         send(TdApi.CancelDownloadFile(fileId, false))
     }
 
+    override suspend fun clearDownloadedFiles() {
+        if (client == null) {
+            File(File(context.filesDir, "tdlib"), "files").deleteRecursively()
+            return
+        }
+        send(TdApi.OptimizeStorage(0, 0, 0, 0, null, null, null, false, 0))
+    }
+
     override fun fileUpdates(fileId: Int): Flow<TelegramFileInfo> =
         updates.filterIsInstance<TdApi.UpdateFile>()
             .filter { it.file.id == fileId }

@@ -1,8 +1,10 @@
 package com.drdisagree.teledrive.data.repository
 
+import com.drdisagree.teledrive.core.common.SafeLog
 import com.drdisagree.teledrive.core.files.AppStoragePaths
 import com.drdisagree.teledrive.core.files.StorageInspector
 import com.drdisagree.teledrive.core.media.ThumbnailMemoryCache
+import com.drdisagree.teledrive.core.telegram.TelegramClient
 import com.drdisagree.teledrive.data.local.dao.CacheDao
 import com.drdisagree.teledrive.data.local.dao.ThumbnailDao
 import com.drdisagree.teledrive.data.local.entity.CacheEntryType
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class CacheRepositoryImpl(
     private val storagePaths: AppStoragePaths,
+    private val telegramClient: TelegramClient,
     private val cacheDao: CacheDao,
     private val thumbnailDao: ThumbnailDao,
     private val storageInspector: StorageInspector,
@@ -62,7 +65,8 @@ class CacheRepositoryImpl(
         clearType(CacheEntryType.PREVIEW)
         clearType(CacheEntryType.STREAM)
         clearTemp()
-        tdlibFilesDir().deleteRecursively()
+        runCatching { telegramClient.clearDownloadedFiles() }
+            .onFailure { SafeLog.w(TAG, "Clearing Telegram's downloads failed", it) }
         refreshStats()
     }
 
@@ -117,4 +121,8 @@ class CacheRepositoryImpl(
                 storageInspector.directorySize(assemblyDir())
 
     private fun tdlibFilesDir(): File = File(File(storagePaths.filesDir, "tdlib"), "files")
+
+    private companion object {
+        const val TAG = "CacheRepository"
+    }
 }

@@ -118,6 +118,8 @@ interface TelegramClient {
 
     suspend fun cancelFileDownload(fileId: Int)
 
+    suspend fun clearDownloadedFiles()
+
     fun fileUpdates(fileId: Int): Flow<TelegramFileInfo>
 
     suspend fun fetchDocuments(chatId: Long, fromMessageId: Long, limit: Int): RemoteDocumentPage
