@@ -42,7 +42,7 @@ fun RenameDialog(
             Button(
                 onClick = { onConfirm(value.trim()) },
                 shapes = ButtonDefaults.shapes(),
-                enabled = value.isNotBlank()
+                enabled = value.isNotBlank() && value.trim() != initialValue
             ) { Text(confirmLabel) }
         },
         dismissButton = {
