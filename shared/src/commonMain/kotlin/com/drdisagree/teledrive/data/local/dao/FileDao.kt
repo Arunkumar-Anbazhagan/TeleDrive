@@ -308,6 +308,10 @@ interface FileDao {
                   WHERE fileId IS NOT NULL
                     AND backupSessionId IS NOT NULL
                     AND state = 'CANCELLED'
+             )
+             AND id NOT IN (
+                 SELECT fileId FROM transfers
+                  WHERE fileId IS NOT NULL AND state != 'CANCELLED'
              )"""
     )
     suspend fun deleteCancelledBackupEntries(): Int
