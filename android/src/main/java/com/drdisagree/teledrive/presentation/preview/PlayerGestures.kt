@@ -3,7 +3,6 @@ package com.drdisagree.teledrive.presentation.preview
 import android.app.Activity
 import android.media.AudioManager
 import android.provider.Settings
-import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -30,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -88,15 +86,6 @@ fun PlayerGestureArea(
     }
     var adjustment by remember { mutableStateOf<AdjustmentLevel?>(null) }
 
-    var overrodeBrightness by remember(activity) { mutableStateOf(false) }
-    DisposableEffect(activity) {
-        onDispose {
-            if (overrodeBrightness) {
-                applyBrightness(activity, WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE)
-            }
-        }
-    }
-
     LaunchedEffect(chromeVisible) {
         if (chromeVisible) adjustment = null
     }
@@ -137,7 +126,6 @@ fun PlayerGestureArea(
                             if (onLeftHalf) {
                                 brightness = (brightness + step).coerceIn(MIN_BRIGHTNESS, 1f)
                                 applyBrightness(activity, brightness)
-                                overrodeBrightness = true
                                 adjustment = AdjustmentLevel(Adjustment.BRIGHTNESS, brightness)
                             } else {
                                 volume = (volume + step).coerceIn(0f, 1f)

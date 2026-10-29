@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -243,6 +244,11 @@ fun PreviewScreen(
             val window = activity?.window ?: return@onDispose
             WindowInsetsControllerCompat(window, view)
                 .show(WindowInsetsCompat.Type.systemBars())
+            if (window.attributes.screenBrightness >= 0f) {
+                window.attributes = window.attributes.apply {
+                    screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                }
+            }
         }
     }
 
